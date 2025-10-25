@@ -120,13 +120,14 @@ ARG USERNAME=developer
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
-# Создаём группы docker и podman (если не существуют)
-RUN (getent group docker || groupadd docker) && \
-  (getent group podman || groupadd podman)
-
-# Создаём пользователя с доступом к обеим группам container runtime
+# Создаём группу и пользователя developer
 RUN groupadd --gid ${USER_GID} ${USERNAME} && \
-  useradd -m -u ${USER_UID} -g ${USER_GID} -G docker,podman -s /bin/bash ${USERNAME}
+  useradd -m -u ${USER_UID} -g ${USER_GID} -s /bin/bash ${USERNAME}
+
+# Создаём группы docker и podman (если не существуют) и добавляем пользователя
+RUN (getent group docker || groupadd docker) && \
+  (getent group podman || groupadd podman) && \
+  usermod -aG docker,podman ${USERNAME}
 
 # Настройка sudo без пароля
 RUN apt-get update \
