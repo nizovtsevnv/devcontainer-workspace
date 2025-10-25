@@ -1,0 +1,94 @@
+{
+  "name": "Polyglot Development Environment",
+  // Сборка контейнера
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".",
+    "args": {
+      "NODE_VERSION": "22",
+      "PHP_VERSION": "8.3"
+    }
+  },
+  "workspaceFolder": "/workspace",
+  "remoteUser": "developer",
+  // Проброс Docker socket для работы с Docker на host машине
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+  // Команда после создания контейнера
+  "postCreateCommand": "echo '✅ Workspace готов к работе!' && echo '📦 Установленные инструменты:' && echo 'Node.js:' $(node --version) && echo 'PHP:' $(php --version | head -n1) && echo 'Rust:' $(rustc --version) && echo '🐳 Container runtime:' && (docker --version 2>/dev/null || podman --version 2>/dev/null || echo 'Docker socket недоступен')",
+  // Расширения и настройки VS Code
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Общие инструменты
+        "editorconfig.editorconfig",
+        "ms-azuretools.vscode-docker",
+        "redhat.vscode-yaml",
+        "streetsidesoftware.code-spell-checker",
+        "streetsidesoftware.code-spell-checker-russian",
+        // Node.js / TypeScript
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-typescript-next",
+        "christian-kohler.npm-intellisense",
+        "eg2.vscode-npm-script",
+        // PHP
+        "bmewburn.vscode-intelephense-client",
+        "xdebug.php-debug",
+        "mrmlnc.vscode-phpstan",
+        // Rust
+        "rust-lang.rust-analyzer",
+        "vadimcn.vscode-lldb",
+        "serayuzgur.crates",
+        "tamasfe.even-better-toml"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "files.eol": "\n",
+        "editor.formatOnSave": true,
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        // Node.js / TypeScript
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "[javascript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[typescript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "eslint.validate": [
+          "javascript",
+          "javascriptreact",
+          "typescript",
+          "typescriptreact"
+        ],
+        "typescript.tsdk": "node_modules/typescript/lib",
+        // PHP
+        "[php]": {
+          "editor.defaultFormatter": "bmewburn.vscode-intelephense-client",
+          "editor.tabSize": 4
+        },
+        "php.validate.enable": true,
+        "php.validate.executablePath": "/usr/bin/php",
+        "intelephense.files.maxSize": 5000000,
+        // Rust
+        "[rust]": {
+          "editor.defaultFormatter": "rust-lang.rust-analyzer",
+          "editor.tabSize": 4
+        },
+        "rust-analyzer.checkOnSave.command": "clippy",
+        // Makefile
+        "[makefile]": {
+          "editor.insertSpaces": false
+        }
+      }
+    }
+  },
+  // Переменные окружения для контейнера
+  "containerEnv": {
+    "TZ": "UTC"
+  },
+  // Пробрасываемые порты (можно расширить при необходимости)
+  "forwardPorts": []
+}
