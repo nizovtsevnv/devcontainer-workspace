@@ -74,9 +74,7 @@ RUN npm install -g \
   eslint \
   prettier \
   nodemon \
-  pm2 \
-  @nestjs/cli \
-  vite
+  pm2
 
 # ===================================
 # PHP + Composer + инструменты

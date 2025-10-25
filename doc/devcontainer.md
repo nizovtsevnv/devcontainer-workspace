@@ -40,8 +40,8 @@ docker --version
 #### Node.js
 - **Пакетные менеджеры:** npm, yarn, pnpm
 - **TypeScript:** typescript, ts-node
-- **Инструменты:** eslint, prettier, nodemon, pm2
-- **Фреймворки CLI:** @nestjs/cli, vite
+- **Инструменты качества:** eslint, prettier
+- **Dev утилиты:** nodemon, pm2
 
 #### PHP
 - **Расширения:**

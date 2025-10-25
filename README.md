@@ -66,7 +66,7 @@ git push -u origin main
 ## 📦 Что включено
 
 ### Технологические стеки
-- **Node.js 22** - npm, yarn, pnpm, typescript, eslint, prettier, vite, nestjs
+- **Node.js 22** - npm, yarn, pnpm, TypeScript, ESLint, Prettier, nodemon, pm2
 - **PHP 8.3** - Composer, php-cs-fixer, phpcs, phpstan (инструменты качества кода)
 - **Rust nightly** - cargo, rustfmt, clippy, rust-analyzer
 
