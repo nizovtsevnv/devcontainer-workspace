@@ -106,14 +106,11 @@ RUN apt-get install -y \
 # Установка Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Глобальные PHP инструменты
+# Глобальные PHP инструменты для контроля единых стандартов качества workspace
 RUN composer global require \
-  phpunit/phpunit \
-  squizlabs/php_codesniffer \
-  phpstan/phpstan \
   friendsofphp/php-cs-fixer \
-  laravel/installer \
-  symfony/cli
+  squizlabs/php_codesniffer \
+  phpstan/phpstan
 
 # ===================================
 # Создание непривилегированного пользователя

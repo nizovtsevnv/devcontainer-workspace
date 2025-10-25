@@ -48,7 +48,7 @@ git submodule update --init --recursive
 
 Используйте воспроизводимую среду для:
 - Разработки кода в субмодулях
-- Написания документации в `docs/` и `README.md`
+- Написания документации в `doc/` и `README.md`
 - Автоматизации через `make` (добавьте `Makefile` и `makefiles/*.mk`)
 
 ### 5. Публикация проекта
@@ -67,7 +67,7 @@ git push -u origin main
 
 ### Технологические стеки
 - **Node.js 22** - npm, yarn, pnpm, typescript, eslint, prettier, vite, nestjs
-- **PHP 8.3** - Composer, phpunit, phpstan, laravel, symfony
+- **PHP 8.3** - Composer, php-cs-fixer, phpcs, phpstan (инструменты качества кода)
 - **Rust nightly** - cargo, rustfmt, clippy, rust-analyzer
 
 ### Системные утилиты
@@ -91,7 +91,8 @@ git push -u origin main
 my-project/
 ├── .devcontainer/          # DevContainer конфигурация
 ├── .github/workflows/      # GitHub Actions (опционально)
-├── docs/                   # Документация проекта
+├── config/                 # Конфигурации стандартов качества
+├── doc/                    # Документация проекта
 ├── modules/                # Git субмодули (ваши компоненты)
 ├── makefiles/              # Make автоматизация (создайте при необходимости)
 └── Makefile                # Главный makefile (создайте при необходимости)
@@ -101,8 +102,8 @@ my-project/
 
 ## 📚 Документация
 
-- [docs/devcontainer.md](docs/devcontainer.md) - Руководство по работе с DevContainer
-- [docs/file-tree.md](docs/file-tree.md) - Описание файловой структуры
+- [doc/devcontainer.md](doc/devcontainer.md) - Руководство по работе с DevContainer
+- [doc/file-tree.md](doc/file-tree.md) - Описание файловой структуры
 
 ---
 
@@ -160,7 +161,7 @@ sudo apt-get install podman podman-compose
 systemctl --user enable --now podman.socket
 ```
 
-Подробнее: [docs/devcontainer.md](docs/devcontainer.md)
+Подробнее: [doc/devcontainer.md](doc/devcontainer.md)
 
 ---
 
@@ -219,7 +220,7 @@ sudo usermod -aG docker $USER
 # Или используйте Podman
 ```
 
-Больше решений: [docs/devcontainer.md](docs/devcontainer.md)
+Больше решений: [doc/devcontainer.md](doc/devcontainer.md)
 
 ---
 

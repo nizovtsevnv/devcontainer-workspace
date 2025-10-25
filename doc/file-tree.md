@@ -12,7 +12,11 @@
 ├── .devcontainer/
 │   ├── devcontainer.json         # Конфигурация Devcontainer
 │   └── Dockerfile                # Конфигурация образа воспроизводимой среды разработки (Debian, NodeJS, PHP, Rust, утилиты)
-├── docs/                         # Документация workspace
+├── config/                       # Конфигурации единых стандартов качества
+│   ├── php/                      # PHP стандарты (php-cs-fixer, phpcs, phpstan)
+│   ├── node/                     # Node.js стандарты (eslint, prettier)
+│   └── rust/                     # Rust стандарты (rustfmt, clippy)
+├── doc/                          # Документация workspace
 │   ├── devcontainer.md           # Руководство по работе с Devcontainer
 │   └── file-tree.md              # Этот файл
 └── modules/                      # Git submodules (модули программных компонентов проекта - сервисы, приложения, библиотеки)

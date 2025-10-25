@@ -52,7 +52,6 @@ docker --version
 - **Инструменты:**
   - Тестирование: PHPUnit
   - Качество кода: PHP_CodeSniffer, PHPStan, PHP-CS-Fixer
-  - Фреймворки: Laravel Installer, Symfony CLI
 
 #### Rust (nightly)
 - **Компилятор:** rustc

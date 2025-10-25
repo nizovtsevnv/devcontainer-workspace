@@ -95,8 +95,8 @@ out/
 .output/
 
 # Generated documentation
-docs/generated/*
-!docs/generated/.gitkeep
+doc/generated/*
+!doc/generated/.gitkeep
 
 # ===================================
 # Dependencies & Packages
