@@ -1,14 +1,20 @@
 {
   "name": "Polyglot Development Environment",
-  // Сборка контейнера
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".",
-    "args": {
-      "NODE_VERSION": "22",
-      "PHP_VERSION": "8.3"
-    }
-  },
+
+  // Использование готового образа из GitHub Container Registry
+  // Быстрее чем локальная сборка (1-2 минуты vs 5-10 минут)
+  "image": "ghcr.io/nizovtsevnv/devcontainer-workspace:latest",
+
+  // Альтернатива: локальная сборка (раскомментируйте если нужна кастомизация)
+  // "build": {
+  //   "dockerfile": "Dockerfile",
+  //   "context": ".",
+  //   "args": {
+  //     "NODE_VERSION": "22",
+  //     "PHP_VERSION": "8.3"
+  //   }
+  // },
+
   "workspaceFolder": "/workspace",
   "remoteUser": "developer",
   // Проброс Docker socket для работы с Docker на host машине
