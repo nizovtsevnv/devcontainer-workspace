@@ -1,5 +1,5 @@
 # Polyglot окружение разработки для рабочего пространства проекта
-# Debian Bookworm LTS + Node.js + PHP + Rust + инструменты разработки
+# Debian Bookworm LTS + Node.js + PHP + Python + Rust + инструменты разработки
 
 FROM debian:bookworm
 
@@ -76,6 +76,10 @@ RUN npm install -g \
   nodemon \
   pm2
 
+# Установка bun (современный пакетный менеджер для Node.js)
+RUN curl -fsSL https://bun.sh/install | bash \
+  && ln -s /root/.bun/bin/bun /usr/local/bin/bun
+
 # ===================================
 # PHP + Composer + инструменты
 # ===================================
@@ -111,6 +115,37 @@ RUN composer global require \
   phpstan/phpstan
 
 # ===================================
+# Python + pip + инструменты
+# ===================================
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+  && apt-get -y install --no-install-recommends \
+  python3 \
+  python3-pip \
+  python3-venv \
+  python3-dev \
+  && apt-get clean -y \
+  && rm -rf /var/lib/apt/lists/*
+
+# Обновление pip и установка базовых инструментов
+RUN python3 -m pip install --upgrade pip setuptools wheel
+
+# Установка Python пакетных менеджеров
+RUN python3 -m pip install \
+  poetry \
+  pipenv
+
+# Установка uv (современный быстрый пакетный менеджер для Python)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Глобальные Python инструменты для контроля единых стандартов качества workspace
+RUN python3 -m pip install \
+  black \
+  flake8 \
+  pylint \
+  pytest \
+  mypy
+
+# ===================================
 # Создание непривилегированного пользователя
 # Совместимость с Docker и Podman на всех платформах
 # ===================================
@@ -127,6 +162,10 @@ RUN (getent group docker || groupadd docker) && \
   (getent group podman || groupadd podman) && \
   usermod -aG docker,podman ${USERNAME}
 
+# Создать группу users (GID 100) для совместимости с большинством Linux дистрибутивов
+# Это позволяет пользователю в контейнере редактировать файлы созданные на хосте
+RUN groupadd -f -g 100 users && usermod -aG users ${USERNAME}
+
 # Настройка sudo без пароля
 RUN apt-get update \
   && apt-get install -y sudo \
@@ -139,10 +178,12 @@ RUN apt-get update \
 RUN mkdir -p /home/${USERNAME}/.npm-global \
   && chown -R ${USERNAME}:${USER_GID} /home/${USERNAME}/.npm-global
 
-# Создаём /workspace и устанавливаем права (важно для Podman user namespaces)
+# Создаём /workspace и устанавливаем права
+# Setgid бит (2775) обеспечивает что все файлы наследуют GID директории
+# Групповые права (g+rwX) позволяют работать с файлами независимо от runtime UID/GID
 RUN mkdir -p /workspace \
-  && chown -R ${USER_UID}:${USER_GID} /workspace \
-  && chmod -R 775 /workspace
+  && chown -R ${USER_UID}:users /workspace \
+  && chmod -R 2775 /workspace
 
 # Настройка git safe.directory (решает проблему "dubious ownership")
 RUN git config --system --add safe.directory /workspace
@@ -164,7 +205,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --de
 # ===================================
 RUN npm config set prefix "/home/$USERNAME/.npm-global"
 
-ENV PATH="/home/$USERNAME/.npm-global/bin:/home/$USERNAME/.cargo/bin:/home/$USERNAME/.composer/vendor/bin:/root/.composer/vendor/bin:${PATH}"
+ENV PATH="/home/$USERNAME/.npm-global/bin:/home/$USERNAME/.cargo/bin:/home/$USERNAME/.composer/vendor/bin:/root/.composer/vendor/bin:/root/.bun/bin:/root/.local/bin:${PATH}"
 
 # Настройка git для пользователя
 RUN git config --global init.defaultBranch main \
@@ -175,17 +216,42 @@ RUN git config --global init.defaultBranch main \
 RUN echo "========================================" \
   && echo "Установленные инструменты:" \
   && echo "========================================" \
-  && echo "Node.js:   $(node --version)" \
-  && echo "npm:       $(npm --version)" \
-  && echo "PHP:       $(php --version | head -n1)" \
-  && echo "Composer:  $(composer --version)" \
-  && echo "Rust:      $(rustc --version)" \
-  && echo "Cargo:     $(cargo --version)" \
+  && echo "Docker:    $(docker --version)" \
   && echo "Git:       $(git --version)" \
   && echo "Make:      $(make --version | head -n1)" \
-  && echo "Docker:    $(docker --version)" \
   && echo "jq:        $(jq --version)" \
   && echo "yq:        $(yq --version)" \
+  && echo "----------------------------------------" \
+  && echo "Node.js:   $(node --version)" \
+  && echo "bun:       $(bun --version)" \
+  && echo "npm:       $(npm --version)" \
+  && echo "pnpm:      $(pnpm --version)" \
+  && echo "yarn:      $(yarn --version)" \
+  && echo "----------------------------------------" \
+  && echo "PHP:       $(php --version | head -n1)" \
+  && echo "Composer:  $(composer --version)" \
+  && echo "----------------------------------------" \
+  && echo "Python:    $(python3 --version)" \
+  && echo "pip:       $(python3 -m pip --version)" \
+  && echo "pipenv:    $(pipenv --version)" \
+  && echo "poetry:    $(poetry --version)" \
+  && echo "uv:        $(uv --version)" \
+  && echo "----------------------------------------" \
+  && echo "Rust:      $(rustc --version)" \
+  && echo "Cargo:     $(cargo --version)" \
   && echo "========================================"
+
+# ===================================
+# Настройка групповых прав доступа
+# ===================================
+# Установить umask для группового доступа к создаваемым файлам
+RUN echo 'umask 0002' >> $HOME/.bashrc
+
+# Установить setgid бит и групповые права на home директорию и кэши
+# Это позволяет работать с файлами независимо от runtime UID/GID
+RUN mkdir -p $HOME/.cache $HOME/.local \
+  && sudo chgrp -R users $HOME $HOME/.cache $HOME/.local $HOME/.npm-global \
+  && sudo chmod -R g+rwX $HOME $HOME/.cache $HOME/.local $HOME/.npm-global \
+  && sudo chmod g+s $HOME $HOME/.cache $HOME/.local $HOME/.npm-global
 
 CMD ["/bin/bash"]

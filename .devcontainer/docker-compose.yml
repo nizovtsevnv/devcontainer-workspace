@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  devcontainer-workspace-dev:
+    image: ghcr.io/nizovtsevnv/devcontainer-workspace:latest
+
+    volumes:
+      - ..:/workspace:cached
+      # Раскомментируйте для доступа к Docker/Podman изнутри контейнера:
+      # Docker:
+      # - /var/run/docker.sock:/var/run/docker.sock
+      # Podman (rootless):
+      # - ${XDG_RUNTIME_DIR}/podman/podman.sock:/var/run/docker.sock
+
+    working_dir: /workspace
+
+    # Автоматическое использование UID/GID хоста (экспортируется в makefiles/config.mk)
+    # Обеспечивает корректные права доступа между хостом и контейнером
+    # Работает для Docker и Podman, fallback: 1000:1000
+    user: "${UID:-1000}:${GID:-1000}"
+
+    # Keep container running
+    command: /bin/bash -c "trap 'exit 0' TERM; while true; do sleep 1; done"
+
+    # Graceful shutdown
+    stop_grace_period: 2s
+
+    # Environment variables
+    environment:
+      - INSIDE_DEVCONTAINER=1
+      - USER=developer
+      - HOME=/home/developer
+
+    # Network mode for accessing host services
+    network_mode: host
