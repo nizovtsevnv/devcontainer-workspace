@@ -127,10 +127,11 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
   && rm -rf /var/lib/apt/lists/*
 
 # Обновление pip и установка базовых инструментов
-RUN python3 -m pip install --upgrade pip setuptools wheel
+# --break-system-packages безопасно для Docker контейнеров (PEP 668)
+RUN python3 -m pip install --break-system-packages --upgrade pip setuptools wheel
 
 # Установка Python пакетных менеджеров
-RUN python3 -m pip install \
+RUN python3 -m pip install --break-system-packages \
   poetry \
   pipenv
 
@@ -138,7 +139,7 @@ RUN python3 -m pip install \
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Глобальные Python инструменты для контроля единых стандартов качества workspace
-RUN python3 -m pip install \
+RUN python3 -m pip install --break-system-packages \
   black \
   flake8 \
   pylint \
