@@ -1,6 +1,6 @@
 # Версия шаблона DevContainer Workspace
 # Этот файл обновляется автоматически при релизах шаблона
-TEMPLATE_VERSION=v0.1.1
+TEMPLATE_VERSION=v0.1.2
 TEMPLATE_REMOTE=https://github.com/nizovtsevnv/devcontainer-workspace.git
 
 # Дата инициализации проекта из шаблона
