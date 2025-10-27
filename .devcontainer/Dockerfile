@@ -152,7 +152,7 @@ RUN python3 -m pip install --break-system-packages \
 # ===================================
 ARG USERNAME=developer
 ARG USER_UID=1000
-ARG USER_GID=$USER_UID
+ARG USER_GID=1000
 
 # Создаём группу и пользователя developer
 RUN groupadd --gid ${USER_GID} ${USERNAME} && \
@@ -162,10 +162,6 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} && \
 RUN (getent group docker || groupadd docker) && \
   (getent group podman || groupadd podman) && \
   usermod -aG docker,podman ${USERNAME}
-
-# Создать группу users (GID 100) для совместимости с большинством Linux дистрибутивов
-# Это позволяет пользователю в контейнере редактировать файлы созданные на хосте
-RUN groupadd -f -g 100 users && usermod -aG users ${USERNAME}
 
 # Настройка sudo без пароля
 RUN apt-get update \
@@ -180,18 +176,24 @@ RUN mkdir -p /home/${USERNAME}/.npm-global \
   && chown -R ${USERNAME}:${USER_GID} /home/${USERNAME}/.npm-global
 
 # Создаём /workspace и устанавливаем права
-# Setgid бит (2775) обеспечивает что все файлы наследуют GID директории
-# Групповые права (g+rwX) позволяют работать с файлами независимо от runtime UID/GID
+# Владелец будет автоматически исправлен entrypoint.sh при запуске
 RUN mkdir -p /workspace \
-  && chown -R ${USER_UID}:users /workspace \
-  && chmod -R 2775 /workspace
+  && chown -R ${USER_UID}:${USER_GID} /workspace \
+  && chmod -R 775 /workspace
 
 # Настройка git safe.directory (решает проблему "dubious ownership")
 RUN git config --system --add safe.directory /workspace
 
+# Копировать и настроить entrypoint для автоматической настройки прав
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 # Переключение на непривилегированного пользователя
 USER ${USERNAME}
 WORKDIR /workspace
+
+# Entrypoint для автоматического исправления прав доступа
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # ===================================
 # Rust + cargo инструменты
@@ -248,11 +250,7 @@ RUN echo "========================================" \
 # Установить umask для группового доступа к создаваемым файлам
 RUN echo 'umask 0002' >> $HOME/.bashrc
 
-# Установить setgid бит и групповые права на home директорию и кэши
-# Это позволяет работать с файлами независимо от runtime UID/GID
-RUN mkdir -p $HOME/.cache $HOME/.local \
-  && sudo chgrp -R users $HOME $HOME/.cache $HOME/.local $HOME/.npm-global \
-  && sudo chmod -R g+rwX $HOME $HOME/.cache $HOME/.local $HOME/.npm-global \
-  && sudo chmod g+s $HOME $HOME/.cache $HOME/.local $HOME/.npm-global
+# Установить групповые права на home директорию и кэши
+RUN mkdir -p $HOME/.cache $HOME/.local
 
 CMD ["/bin/bash"]

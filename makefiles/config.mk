@@ -10,7 +10,15 @@ WORKSPACE_ROOT := $(shell pwd)
 IS_INSIDE_CONTAINER := $(shell [ -f /.dockerenv ] || [ -n "$$INSIDE_DEVCONTAINER" ]; echo $$?)
 
 # Автоопределение container runtime (docker или podman)
-CONTAINER_RUNTIME := $(shell command -v docker >/dev/null 2>&1 && echo docker || echo podman)
+# Проверяем реальный runtime, т.к. docker может быть symlink на podman
+CONTAINER_RUNTIME := $(shell \
+	if command -v podman >/dev/null 2>&1 && (podman --version 2>/dev/null | grep -q podman || docker --version 2>/dev/null | grep -qi podman); then \
+		echo podman; \
+	elif command -v docker >/dev/null 2>&1; then \
+		echo docker; \
+	else \
+		echo podman; \
+	fi)
 
 # Отключить предупреждения podman-compose
 export PODMAN_COMPOSE_WARNING_LOGS = 0
