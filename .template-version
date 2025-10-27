@@ -1,0 +1,8 @@
+# Версия шаблона DevContainer Workspace
+# Этот файл обновляется автоматически при релизах шаблона
+TEMPLATE_VERSION=v0.1.1
+TEMPLATE_REMOTE=https://github.com/nizovtsevnv/devcontainer-workspace.git
+
+# Дата инициализации проекта из шаблона
+# Заполняется автоматически командой: make devenv init
+TEMPLATE_INITIALIZED=
