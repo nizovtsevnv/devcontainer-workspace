@@ -7,8 +7,16 @@
 ## help: Показать эту справку
 help:
 	@printf "$(COLOR_SECTION)DevContainer Workspace$(COLOR_RESET)\n\n"
-	@printf "$(COLOR_INFO)Управление средой:$(COLOR_RESET)\n"
-	@$(call print-commands-table,"^## (init|up|down|sh|exec|version):")
+
+	@# Секция: Среда разработки
+	@printf "$(COLOR_INFO)Среда разработки:$(COLOR_RESET)\n"
+	@$(call print-commands-table,"^## (up|down|sh|exec|version):")
+	@# Добавить devenv команды вручную с правильным описанием
+	@printf "  $(COLOR_SUCCESS)make devenv init      $(COLOR_RESET)Удаление артефактов шаблона (выполняется автоматически)\n"
+	@printf "  $(COLOR_SUCCESS)make devenv version   $(COLOR_RESET)Текущая и актуальная версия шаблона\n"
+	@printf "  $(COLOR_SUCCESS)make devenv update    $(COLOR_RESET)Обновить из upstream шаблона\n"
+
+	@# Секция: Модули проекта
 	@printf "\n$(COLOR_INFO)Модули проекта:$(COLOR_RESET)\n"
 	@if [ -n "$(MODULE_NAMES)" ]; then \
 		for module in $(MODULE_NAMES); do \
@@ -22,9 +30,10 @@ help:
 			[ -f "$$module_path/.gitlab-ci.yml" ] && tech="$$tech gitlab"; \
 			[ -d "$$module_path/.github/workflows" ] && tech="$$tech github"; \
 			tech=$$(echo "$$tech" | xargs); \
-			printf "  $(COLOR_SUCCESS)• $$module$(COLOR_RESET)"; \
+			\
+			printf "  $(COLOR_SUCCESS)make %-17s$(COLOR_RESET)" "$$module"; \
 			if [ -n "$$tech" ]; then \
-				printf " ["; \
+				printf "["; \
 				first=1; \
 				for t in $$tech; do \
 					if [ $$first -eq 0 ]; then printf ", "; fi; \
@@ -44,14 +53,6 @@ help:
 			fi; \
 			printf "\n"; \
 		done; \
-		printf "\n  Команды модуля:\n"; \
-		printf "    $(COLOR_SUCCESS)make <модуль>$(COLOR_RESET)                    Справка по модулю\n"; \
-		printf "    $(COLOR_SUCCESS)make <модуль> <менеджер> <cmd>$(COLOR_RESET)  Команда пакетного менеджера\n"; \
-		printf "    $(COLOR_SUCCESS)make <модуль> <makefile-cmd>$(COLOR_RESET)    Makefile команда (если есть)\n"; \
-		printf "\n  Примеры:\n"; \
-		printf "    $(COLOR_SUCCESS)make myapp bun install$(COLOR_RESET)    - установить зависимости через bun\n"; \
-		printf "    $(COLOR_SUCCESS)make myapi composer test$(COLOR_RESET)  - запустить тесты через composer\n"; \
-		printf "    $(COLOR_SUCCESS)make ml uv run main.py$(COLOR_RESET)    - запустить Python через uv\n"; \
 	else \
 		printf "  В каталоге modules/ ничего нет\n"; \
 	fi
