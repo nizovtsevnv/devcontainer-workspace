@@ -2,20 +2,24 @@
 # Базовые команды управления средой
 # ===================================
 
-.PHONY: init up down sh exec version
-
-## init: Интерактивная инициализация проекта
-init:
-	@$(call log-section,Инициализация workspace)
-	@git submodule update --init --recursive 2>/dev/null && $(call log-success,Субмодули инициализированы) || true
-	@$(call ask-confirm-default-yes,Запустить DevContainer) && $(MAKE) up || true
-	@$(call log-success,Инициализация завершена)
+.PHONY: up down sh exec version
 
 ## up: Запуск DevContainer
 up:
 ifeq ($(IS_INSIDE_CONTAINER),0)
 	@$(call log-warning,Уже внутри контейнера)
 else
+	@# Проверка: режим разработки шаблона?
+	@IS_DEV_MODE="$(call check-template-dev-mode)"; \
+	if [ "$$IS_DEV_MODE" = "false" ]; then \
+		if [ -f ".template-version" ]; then \
+			INIT_DATE=$$(grep "^TEMPLATE_INITIALIZED=" .template-version 2>/dev/null | cut -d'=' -f2-); \
+			if [ -z "$$INIT_DATE" ]; then \
+				printf "\033[0;36mℹ INFO:\033[0m %s\n" "Первый запуск: требуется инициализация проекта"; \
+				$(MAKE) devenv init || exit 1; \
+			fi; \
+		fi; \
+	fi
 	@$(call log-section,Запуск DevContainer)
 	@$(call check-command,$(CONTAINER_RUNTIME))
 	@if [ ! -f "$(COMPOSE_FILE)" ]; then \
@@ -71,27 +75,77 @@ exec:
 	fi
 
 ## version: Вывод версий инструментов DevContainer и модулей
-version:
+.PHONY: core-version
+core-version:
 	@$(call ensure-container-running)
-	@$(call log-section,Версии инструментов)
+	@$(call log-section,Версии инструментов среды разработки)
 	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
-		node --version 2>/dev/null | sed 's/^/  Node.js:  /' || echo "  Node.js:  не установлен"; \
-		php --version 2>/dev/null | head -n1 | sed 's/^/  PHP:      /' || echo "  PHP:      не установлен"; \
-		rustc --version 2>/dev/null | sed 's/^/  Rust:     /' || echo "  Rust:     не установлен"; \
-		docker --version 2>/dev/null | sed 's/^/  Docker:   /' || echo "  Docker:   не установлен"; \
-		git --version 2>/dev/null | sed 's/^/  Git:      /' || echo "  Git:      не установлен"; \
+		docker_ver=$$(docker --version 2>/dev/null | awk '{print $$3}' | sed 's/,$$//') || docker_ver="не установлен"; \
+		git_ver=$$(git --version 2>/dev/null | awk '{print $$3}') || git_ver="не установлен"; \
+		node_ver=$$(node --version 2>/dev/null | sed 's/^v//') || node_ver="не установлен"; \
+		php_ver=$$(php --version 2>/dev/null | head -n1 | awk '{print $$2}') || php_ver="не установлен"; \
+		rust_ver=$$(rustc --version 2>/dev/null | awk '{print $$2}') || rust_ver="не установлен"; \
+		printf "  %-20s $$docker_ver\n" "Docker"; \
+		printf "  %-20s $$git_ver\n" "Git"; \
+		printf "  %-20s $$node_ver\n" "Node.js"; \
+		printf "  %-20s $$php_ver\n" "PHP"; \
+		printf "  %-20s $$rust_ver\n" "Rust"; \
 	else \
 		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) exec -T $(DEVCONTAINER_SERVICE) bash -c '\
-			node --version 2>/dev/null | sed "s/^/  Node.js:  /" || echo "  Node.js:  не установлен"; \
-			php --version 2>/dev/null | head -n1 | sed "s/^/  PHP:      /" || echo "  PHP:      не установлен"; \
-			rustc --version 2>/dev/null | sed "s/^/  Rust:     /" || echo "  Rust:     не установлен"; \
-			docker --version 2>/dev/null | sed "s/^/  Docker:   /" || echo "  Docker:   не установлен"; \
-			git --version 2>/dev/null | sed "s/^/  Git:      /" || echo "  Git:      не установлен"'; \
+			docker_ver=$$(docker --version 2>/dev/null | awk "{print \$$3}" | sed "s/,\$$//") || docker_ver="не установлен"; \
+			git_ver=$$(git --version 2>/dev/null | awk "{print \$$3}") || git_ver="не установлен"; \
+			node_ver=$$(node --version 2>/dev/null | sed "s/^v//") || node_ver="не установлен"; \
+			php_ver=$$(php --version 2>/dev/null | head -n1 | awk "{print \$$2}") || php_ver="не установлен"; \
+			rust_ver=$$(rustc --version 2>/dev/null | awk "{print \$$2}") || rust_ver="не установлен"; \
+			printf "  %-20s $$docker_ver\n" "Docker"; \
+			printf "  %-20s $$git_ver\n" "Git"; \
+			printf "  %-20s $$node_ver\n" "Node.js"; \
+			printf "  %-20s $$php_ver\n" "PHP"; \
+			printf "  %-20s $$rust_ver\n" "Rust"'; \
 	fi
 	@if [ -n "$(MODULE_NAMES)" ]; then \
+		printf "\n"; \
 		$(call log-section,Модули проекта); \
-		for module in $(MODULE_NAMES); do \
-			printf "  • $$module\n"; \
+		for module in $$(echo "$(MODULE_NAMES)" | tr ' ' '\n' | sort); do \
+			module_path="$(MODULES_DIR)/$$module"; \
+			versions=""; \
+			\
+			if [ -f "$$module_path/Cargo.toml" ]; then \
+				rust_ver=$$(grep '^version = ' "$$module_path/Cargo.toml" | head -1 | sed 's/version = "\(.*\)"/\1/' | xargs); \
+				if [ -n "$$rust_ver" ]; then \
+					versions="$$versions$$rust_ver (Rust)"; \
+				fi; \
+			fi; \
+			\
+			if [ -f "$$module_path/package.json" ]; then \
+				node_ver=$$(grep '"version":' "$$module_path/package.json" | head -1 | sed 's/.*"version": "\(.*\)".*/\1/' | xargs); \
+				if [ -n "$$node_ver" ]; then \
+					[ -n "$$versions" ] && versions="$$versions, "; \
+					versions="$$versions$$node_ver (Node.js)"; \
+				fi; \
+			fi; \
+			\
+			if [ -f "$$module_path/composer.json" ]; then \
+				php_ver=$$(grep '"version":' "$$module_path/composer.json" | head -1 | sed 's/.*"version": "\(.*\)".*/\1/' | xargs); \
+				if [ -n "$$php_ver" ]; then \
+					[ -n "$$versions" ] && versions="$$versions, "; \
+					versions="$$versions$$php_ver (PHP)"; \
+				fi; \
+			fi; \
+			\
+			if [ -f "$$module_path/pyproject.toml" ]; then \
+				python_ver=$$(grep '^version = ' "$$module_path/pyproject.toml" | head -1 | sed 's/version = "\(.*\)"/\1/' | xargs); \
+				if [ -n "$$python_ver" ]; then \
+					[ -n "$$versions" ] && versions="$$versions, "; \
+					versions="$$versions$$python_ver (Python)"; \
+				fi; \
+			fi; \
+			\
+			if [ -n "$$versions" ]; then \
+				printf "  %-20s $$versions\n" "$$module"; \
+			else \
+				printf "  $$module\n"; \
+			fi; \
 		done; \
 	fi
 
