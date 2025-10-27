@@ -185,7 +185,7 @@ RUN mkdir -p /workspace \
 RUN git config --system --add safe.directory /workspace
 
 # Копировать и настроить entrypoint для автоматической настройки прав
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY .devcontainer/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Переключение на непривилегированного пользователя
