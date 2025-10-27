@@ -3,22 +3,38 @@
 ```
 /
 ├── .editorconfig                 # Настройки форматирования кода для всех редакторов
+├── .template-version             # Метаданные шаблона (версия, remote, дата инициализации)
+├── .templateignore               # Файлы шаблона для удаления при инициализации
 ├── .git/                         # Git repository
-├── .gitignore                    # Базовые Git ignore правила (каждый модуль расширяет правила своим файлом конфигурации)
-├── .gitmodules                   # Конфигурация git модулей
+├── .gitignore                    # Базовые Git ignore правила
+├── .gitmodules                   # Конфигурация git субмодулей
 ├── .github/
 │   └── workflows/
 │       └── build-devcontainer.yml  # GitHub Actions: автосборка и публикация Docker образа
 ├── .devcontainer/
-│   ├── devcontainer.json         # Конфигурация Devcontainer
-│   └── Dockerfile                # Конфигурация образа воспроизводимой среды разработки (Debian, NodeJS, PHP, Rust, утилиты)
+│   ├── devcontainer.json         # Конфигурация DevContainer для VS Code
+│   ├── docker-compose.yml        # Docker Compose для headless режима
+│   ├── Dockerfile                # Образ среды разработки (Debian, Node.js, PHP, Python, Rust)
+│   └── entrypoint.sh             # Инициализация контейнера (UID/GID маппинг)
+├── Makefile                      # Главный makefile с системой многоуровневых команд
+├── README.md                     # Документация шаблона
+├── README.project.md             # Шаблон README для нового проекта
+├── makefiles/                    # Модули системы автоматизации
+│   ├── config.mk                 # Конфигурация, переменные, определение окружения
+│   ├── functions.mk              # Переиспользуемые функции (логирование, утилиты)
+│   ├── detect.mk                 # Автоопределение технологий и пакетных менеджеров
+│   ├── core.mk                   # Базовые команды (up, down, sh, exec, version)
+│   ├── modules.mk                # Динамические команды модулей
+│   ├── devenv.mk                 # Управление шаблоном (init, version, update)
+│   └── help.mk                   # Система справки
 ├── config/                       # Конфигурации единых стандартов качества
 │   ├── php/                      # PHP стандарты (php-cs-fixer, phpcs, phpstan)
 │   ├── node/                     # Node.js стандарты (eslint, prettier)
 │   └── rust/                     # Rust стандарты (rustfmt, clippy)
 ├── doc/                          # Документация workspace
-│   ├── devcontainer.md           # Руководство по работе с Devcontainer
+│   ├── makefile.md               # Документация системы автоматизации
+│   ├── devcontainer.md           # Руководство по работе с DevContainer
 │   └── file-tree.md              # Этот файл
-└── modules/                      # Git submodules (модули программных компонентов проекта - сервисы, приложения, библиотеки)
+└── modules/                      # Git субмодули (компоненты проекта: сервисы, приложения, библиотеки)
     └── .gitkeep                  # Placeholder для защиты каталога от удаления из Git
 ```
