@@ -1,0 +1,42 @@
+# PHPStan конфигурация
+#
+# Для использования в модуле создайте symlink:
+#   ln -s ../../config/php/phpstan.neon phpstan.neon
+#
+# Или создайте собственный файл с расширением:
+#   includes:
+#     - ../../config/php/phpstan.neon
+#   parameters:
+#     level: 8
+
+parameters:
+    # Уровень строгости (0-9, где 9 - самый строгий)
+    level: 6
+
+    # Пути для анализа
+    paths:
+        - .
+
+    # Исключения
+    excludePaths:
+        - vendor
+        - node_modules
+        - storage
+        - bootstrap/cache
+        - _ide_helper.php
+        - _ide_helper_models.php
+        - .phpstorm.meta.php
+
+    # Проверка неиспользуемых переменных и параметров
+    checkMissingIterableValueType: false
+    checkGenericClassInNonGenericObjectType: false
+
+    # Игнорировать ошибки в тестах (можно настроить)
+    ignoreErrors:
+        # Примеры игнорирования специфичных ошибок
+        # - '#Call to an undefined method#'
+        # - '#Access to an undefined property#'
+
+    # Дополнительные правила
+    reportUnmatchedIgnoredErrors: false
+    treatPhpDocTypesAsCertain: true

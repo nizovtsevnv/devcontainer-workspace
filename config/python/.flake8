@@ -1,0 +1,52 @@
+# ===================================
+# Flake8 конфигурация
+# ===================================
+# Линтер для Python кода
+# Для использования создайте symlink в модуле:
+#   ln -s ../../config/python/.flake8 .flake8
+
+[flake8]
+# Максимальная длина строки (совместимо с black)
+max-line-length = 100
+
+# Максимальная сложность функции (McCabe)
+max-complexity = 10
+
+# Файлы и директории для исключения
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    env,
+    .mypy_cache,
+    .pytest_cache,
+    build,
+    dist,
+    *.egg-info,
+    node_modules
+
+# Игнорируемые ошибки и предупреждения
+ignore =
+    # E203: whitespace before ':' (конфликт с black)
+    E203,
+    # W503: line break before binary operator (устаревшее правило)
+    W503,
+    # E501: line too long (обрабатывается black)
+    E501
+
+# Дополнительные плагины (если установлены)
+# flake8-docstrings: проверка docstrings
+# flake8-bugbear: дополнительные проверки
+# flake8-comprehensions: улучшенная проверка list/dict/set comprehensions
+
+# Проверка docstrings
+docstring-convention = google
+
+# Количество импортов в одной строке
+application-import-names = app,src
+import-order-style = google
+
+# Включить подсчёт статистики
+statistics = True
+count = True

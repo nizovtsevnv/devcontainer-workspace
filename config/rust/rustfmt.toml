@@ -1,0 +1,66 @@
+# Rustfmt конфигурация
+# Для использования в модуле создайте symlink:
+#   ln -s ../../config/rust/rustfmt.toml rustfmt.toml
+
+# Максимальная ширина строки
+max_width = 100
+
+# Жесткая ширина (принудительное переносание)
+hard_tabs = false
+
+# Размер табуляции
+tab_spaces = 4
+
+# Перенос строк
+newline_style = "Unix"
+
+# Форматирование импортов
+imports_granularity = "Crate"
+imports_layout = "Vertical"
+group_imports = "StdExternalCrate"
+reorder_imports = true
+
+# Комментарии
+normalize_comments = true
+normalize_doc_attributes = true
+wrap_comments = true
+comment_width = 80
+
+# Структуры и енумы
+struct_field_align_threshold = 20
+enum_discrim_align_threshold = 20
+
+# Цепочки вызовов
+chain_width = 60
+
+# Функции и методы
+fn_single_line = false
+fn_params_layout = "Tall"
+brace_style = "SameLineWhere"
+where_single_line = false
+
+# Управляющие структуры
+control_brace_style = "AlwaysSameLine"
+
+# Массивы и слайсы
+array_width = 60
+
+# Trailing commas
+trailing_comma = "Vertical"
+
+# Пробелы
+space_after_colon = true
+space_before_colon = false
+spaces_around_ranges = false
+
+# Match выражения
+match_block_trailing_comma = true
+match_arm_blocks = true
+
+# Use statements
+use_small_heuristics = "Default"
+
+# Прочее
+edition = "2021"
+unstable_features = false
+version = "Two"
