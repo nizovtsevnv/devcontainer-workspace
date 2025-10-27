@@ -39,8 +39,8 @@ COMPOSE_FILE := .devcontainer/docker-compose.yml
 # Пути для субмодулей
 MODULES_DIR := modules
 MODULES := $(wildcard $(MODULES_DIR)/*)
-# Все модули (не только с Makefile, т.к. используем автоопределение технологий)
-ALL_MODULES := $(filter-out %/., $(wildcard $(MODULES_DIR)/*/.))
+# Все модули: только директории (исключая файлы типа .gitkeep)
+ALL_MODULES := $(filter-out $(MODULES_DIR)/.gitkeep,$(filter-out %/.gitkeep,$(MODULES)))
 
 # Цвета для вывода (используются в functions.mk)
 COLOR_RESET := \033[0m
