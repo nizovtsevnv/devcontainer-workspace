@@ -32,17 +32,26 @@ ifneq ($(filter $(FIRST_GOAL),$(MODULE_NAMES)),)
       # Создать target для модуля с пакетным менеджером
       .PHONY: $(MODULE_NAME)
       $(MODULE_NAME):
-	@$(call ensure-container-running)
-	@printf "\\n$(COLOR_SECTION)▶ Модуль $(MODULE_NAME): $(PACKAGE_MANAGER) $(PM_COMMAND)$(COLOR_RESET)\\n"
 	@if [ -z "$(PM_COMMAND)" ]; then \
-		printf "$(COLOR_ERROR)✗ ERROR:$(COLOR_RESET) %s\\n" "Использование: make $(MODULE_NAME) $(PACKAGE_MANAGER) <команда>" >&2; \
-		exit 1; \
-	fi; \
-	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
-		cd "$(MODULE_PATH)" && $(PACKAGE_MANAGER) $(PM_COMMAND); \
+		printf "$(COLOR_SECTION)▶ Модуль $(MODULE_NAME): $(PACKAGE_MANAGER) --help$(COLOR_RESET)\\n"; \
 	else \
-		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) exec -T $(DEVCONTAINER_SERVICE) \
-			bash -c "cd $(DEVCONTAINER_WORKDIR)/$(MODULE_PATH) && $(PACKAGE_MANAGER) $(PM_COMMAND)"; \
+		printf "$(COLOR_SECTION)▶ Модуль $(MODULE_NAME): $(PACKAGE_MANAGER) $(PM_COMMAND)$(COLOR_RESET)\\n"; \
+	fi
+	@$(call ensure-container-running)
+	@if [ -z "$(PM_COMMAND)" ]; then \
+		if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
+			cd "$(MODULE_PATH)" && $(PACKAGE_MANAGER) --help; \
+		else \
+			$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) exec -T $(DEVCONTAINER_SERVICE) \
+				bash -c "cd $(DEVCONTAINER_WORKDIR)/$(MODULE_PATH) && $(PACKAGE_MANAGER) --help"; \
+		fi; \
+	else \
+		if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
+			cd "$(MODULE_PATH)" && $(PACKAGE_MANAGER) $(PM_COMMAND); \
+		else \
+			$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) exec -T $(DEVCONTAINER_SERVICE) \
+				bash -c "cd $(DEVCONTAINER_WORKDIR)/$(MODULE_PATH) && $(PACKAGE_MANAGER) $(PM_COMMAND)"; \
+		fi; \
 	fi
 
       # Подавить ошибки для остальных аргументов
@@ -88,60 +97,72 @@ ifneq ($(filter $(FIRST_GOAL),$(MODULE_NAMES)),)
     # Только имя модуля без команды
     .PHONY: $(MODULE_NAME)
     $(MODULE_NAME):
-	@printf "\\n$(COLOR_SECTION)▶ Модуль: $(MODULE_NAME)$(COLOR_RESET)\\n"
-	@printf "$(COLOR_INFO)Путь:$(COLOR_RESET) $(MODULE_PATH)\\n\\n"
+	@printf "$(COLOR_SECTION)▶ Модуль: $(MODULE_NAME)$(COLOR_RESET)\\n"
+	@# Вывод версии модуля
+	@module_path="$(MODULE_PATH)"; \
+	versions=""; \
+	if [ -f "$$module_path/Cargo.toml" ]; then \
+		rust_ver=$$(grep '^version = ' "$$module_path/Cargo.toml" | head -1 | sed 's/version = "\(.*\)"/\1/' | xargs); \
+		if [ -n "$$rust_ver" ]; then \
+			versions="$$versions$$rust_ver (Rust)"; \
+		fi; \
+	fi; \
+	if [ -f "$$module_path/package.json" ]; then \
+		node_ver=$$(grep '"version":' "$$module_path/package.json" | head -1 | sed 's/.*"version": "\(.*\)".*/\1/' | xargs); \
+		if [ -n "$$node_ver" ]; then \
+			[ -n "$$versions" ] && versions="$$versions, "; \
+			versions="$$versions$$node_ver (Node.js)"; \
+		fi; \
+	fi; \
+	if [ -f "$$module_path/composer.json" ]; then \
+		php_ver=$$(grep '"version":' "$$module_path/composer.json" | head -1 | sed 's/.*"version": "\(.*\)".*/\1/' | xargs); \
+		if [ -n "$$php_ver" ]; then \
+			[ -n "$$versions" ] && versions="$$versions, "; \
+			versions="$$versions$$php_ver (PHP)"; \
+		fi; \
+	fi; \
+	if [ -f "$$module_path/pyproject.toml" ]; then \
+		python_ver=$$(grep '^version = ' "$$module_path/pyproject.toml" | head -1 | sed 's/version = "\(.*\)"/\1/' | xargs); \
+		if [ -n "$$python_ver" ]; then \
+			[ -n "$$versions" ] && versions="$$versions, "; \
+			versions="$$versions$$python_ver (Python)"; \
+		fi; \
+	fi; \
+	if [ -n "$$versions" ]; then \
+		printf "Версия: $$versions\\n"; \
+	fi
+	@# Вывод инструментов
 	@if [ -n "$(MODULE_TECH)" ]; then \
-		printf "$(COLOR_INFO)Найденные технологии:$(COLOR_RESET)\\n"; \
+		printf "\\nИнструменты:\\n"; \
 		for tech in $(MODULE_TECH); do \
 			case $$tech in \
 				nodejs) \
-					printf "  $(COLOR_SUCCESS)• Node.js$(COLOR_RESET)\\n"; \
-					managers="$(call get-all-managers,$(MODULE_PATH),nodejs)"; \
-					primary="$(call get-primary-manager,$(MODULE_PATH),nodejs)"; \
-					printf "    Менеджеры: $$managers"; \
-					if [ -n "$$primary" ]; then printf " (основной: $$primary)"; fi; \
-					printf "\\n"; \
-					printf "    Команды: make $(MODULE_NAME) <npm|yarn|pnpm|bun> <команда>\\n"; \
+					printf "  make $(MODULE_NAME) npm        Помощь по использованию пакетного менеджера npm\\n"; \
+					printf "  make $(MODULE_NAME) yarn       Помощь по использованию пакетного менеджера Yarn\\n"; \
+					printf "  make $(MODULE_NAME) pnpm       Помощь по использованию пакетного менеджера pnpm\\n"; \
+					printf "  make $(MODULE_NAME) bun        Помощь по использованию пакетного менеджера Bun\\n"; \
 					;; \
 				php) \
-					printf "  $(COLOR_SUCCESS)• PHP$(COLOR_RESET)\\n"; \
-					printf "    Менеджер: composer\\n"; \
-					printf "    Команды: make $(MODULE_NAME) composer <команда>\\n"; \
+					printf "  make $(MODULE_NAME) composer   Помощь по использованию пакетного менеджера Composer\\n"; \
 					;; \
 				python) \
-					printf "  $(COLOR_SUCCESS)• Python$(COLOR_RESET)\\n"; \
-					managers="$(call get-all-managers,$(MODULE_PATH),python)"; \
-					primary="$(call get-primary-manager,$(MODULE_PATH),python)"; \
-					printf "    Менеджеры: $$managers"; \
-					if [ -n "$$primary" ]; then printf " (основной: $$primary)"; fi; \
-					printf "\\n"; \
-					printf "    Команды: make $(MODULE_NAME) <pip|poetry|pipenv|uv> <команда>\\n"; \
+					printf "  make $(MODULE_NAME) pip        Помощь по использованию пакетного менеджера pip\\n"; \
+					printf "  make $(MODULE_NAME) poetry     Помощь по использованию пакетного менеджера Poetry\\n"; \
+					printf "  make $(MODULE_NAME) pipenv     Помощь по использованию пакетного менеджера Pipenv\\n"; \
+					printf "  make $(MODULE_NAME) uv         Помощь по использованию пакетного менеджера uv\\n"; \
 					;; \
 				rust) \
-					printf "  $(COLOR_SUCCESS)• Rust$(COLOR_RESET)\\n"; \
-					printf "    Менеджер: cargo\\n"; \
-					printf "    Команды: make $(MODULE_NAME) cargo <команда>\\n"; \
+					printf "  make $(MODULE_NAME) cargo      Помощь по использованию пакетного менеджера Cargo\\n"; \
 					;; \
 				makefile) \
-					printf "  $(COLOR_SUCCESS)• Makefile$(COLOR_RESET)\\n"; \
-					printf "    Команды: make $(MODULE_NAME) <команда>\\n"; \
-					;; \
-				gitlab) \
-					printf "  $(COLOR_SUCCESS)• GitLab CI$(COLOR_RESET)\\n"; \
-					;; \
-				github) \
-					printf "  $(COLOR_SUCCESS)• GitHub Actions$(COLOR_RESET)\\n"; \
+					printf "\\nMakefile команды:\\n"; \
+					cd "$(MODULE_PATH)" && $(MAKE) help 2>/dev/null || printf "  (справка недоступна)\\n"; \
 					;; \
 			esac; \
 		done; \
 	else \
-		printf "$(COLOR_WARNING)⚠ WARNING:$(COLOR_RESET) %s\\n" "Технологии не найдены в модуле"; \
-		printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) %s\\n" "Создайте маркерные файлы (package.json, Cargo.toml, и т.д.)"; \
-	fi; \
-	if [ -f "$(MODULE_PATH)/Makefile" ]; then \
-		printf "\\n$(COLOR_INFO)Makefile команды:$(COLOR_RESET)\\n"; \
-		cd "$(MODULE_PATH)" && $(MAKE) help 2>/dev/null || printf "  (справка недоступна)\\n"; \
-	fi; \
-	printf "\\n"
+		printf "\\n$(COLOR_WARNING)⚠ WARNING:$(COLOR_RESET) Технологии не найдены в модуле\\n"; \
+		printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Создайте маркерные файлы (package.json, Cargo.toml, и т.д.)\\n"; \
+	fi
   endif
 endif
