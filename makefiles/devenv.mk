@@ -159,7 +159,7 @@ devenv-init-internal:
 	git remote add template "$$TEMPLATE_URL"; \
 	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Добавлен remote 'template'\n"; \
 	\
-	git fetch template --tags >/dev/null 2>&1; \
+	git fetch template --tags --force >/dev/null 2>&1 || true; \
 	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Получены теги из template\n"
 
 	@# Интерактивный выбор нового origin
@@ -324,7 +324,7 @@ devenv-update-project:
 	fi
 
 	@# Fetch обновлений
-	@git fetch template --tags >/dev/null 2>&1
+	@git fetch template --tags --force >/dev/null 2>&1 || true
 
 	@# Определить текущую и последнюю версии
 	@CURRENT_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
