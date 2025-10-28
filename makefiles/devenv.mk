@@ -19,12 +19,11 @@ DEVENV_CMD := $(word 2,$(MAKECMDGOALS))
 ## devenv: Команды управления шаблоном (init, version, update)
 devenv:
 	@if [ -z "$(DEVENV_CMD)" ]; then \
-		$(call log-error,Укажите подкоманду: init, version, update); \
-		$(call log-info,Примеры:); \
-		printf "  make devenv init      - инициализация проекта из шаблона\n"; \
-		printf "  make devenv version   - показать версию шаблона\n"; \
-		printf "  make devenv update    - обновить из upstream\n"; \
-		exit 1; \
+		$(call log-section,Команды управления шаблоном разработки); \
+		printf "  $(COLOR_INFO)make devenv init$(COLOR_RESET)      - инициализация проекта из шаблона\n"; \
+		printf "  $(COLOR_INFO)make devenv version$(COLOR_RESET)   - показать версию шаблона\n"; \
+		printf "  $(COLOR_INFO)make devenv update$(COLOR_RESET)    - обновить из upstream\n"; \
+		exit 0; \
 	elif [ "$(DEVENV_CMD)" = "init" ]; then \
 		$(MAKE) devenv-init-internal; \
 		exit 0; \
