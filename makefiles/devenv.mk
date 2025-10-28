@@ -244,7 +244,7 @@ devenv-version-internal:
 		printf "  Версия шаблона:  $$TEMPLATE_VERSION\n"; \
 		printf "  Статус:          $(COLOR_SUCCESS)инициализирован$(COLOR_RESET)\n"; \
 	else \
-		CURRENT_VERSION=$$(cat .template-version 2>/dev/null || git describe --tags --exact-match HEAD 2>/dev/null || echo "unknown"); \
+		CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null || git describe --tags 2>/dev/null || echo "unknown"); \
 		printf "  Версия:          $$CURRENT_VERSION\n"; \
 		printf "  Статус:          $(COLOR_WARNING)неинициализирован (разработка шаблона)$(COLOR_RESET)\n"; \
 	fi; \
@@ -380,14 +380,14 @@ devenv-update-project:
 					git checkout --ours "$$conflict_file" 2>/dev/null; \
 					git add "$$conflict_file" 2>/dev/null; \
 				fi; \
-				;;
-				.gitignore|README.md|.editorconfig|doc/*|config/*) \
-					git checkout --ours "$$conflict_file" 2>/dev/null; \
-					git add "$$conflict_file" 2>/dev/null; \
-					;; \
-				*) \
-					printf "$(COLOR_WARNING)⚠$(COLOR_RESET) $$conflict_file (требует ручного разрешения)\n"; \
-					;; \
+				;; \
+			.gitignore|README.md|.editorconfig|doc/*|config/*) \
+				git checkout --ours "$$conflict_file" 2>/dev/null; \
+				git add "$$conflict_file" 2>/dev/null; \
+				;; \
+			*) \
+				printf "$(COLOR_WARNING)⚠$(COLOR_RESET) $$conflict_file (требует ручного разрешения)\n"; \
+				;; \
 			esac; \
 		done; \
 		\
@@ -471,7 +471,7 @@ devenv-update-template:
 		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"; \
 	fi
 
-	@# Прочитать версию из .template-version
-	@TEMPLATE_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
+	@# Определить версию шаблона через git
+	@TEMPLATE_VERSION=$$(git describe --tags 2>/dev/null || echo "unknown"); \
 	printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \
 	printf "  Версия шаблона: $$TEMPLATE_VERSION\n"
