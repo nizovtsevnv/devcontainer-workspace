@@ -425,6 +425,13 @@ devenv-update-project:
 	if [ -f .devcontainer/docker-compose.yml ]; then \
 		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновление Docker образа и пересоздание контейнера...\n"; \
 		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) pull 2>&1 | grep -v "Trying to pull\|Writing manifest" || true; \
+		if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
+			POD_NAME=$$(podman pod ls --format "{{.Name}}" 2>/dev/null | grep devcontainer | head -1); \
+			if [ -n "$$POD_NAME" ]; then \
+				printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Удаление старого pod: $$POD_NAME...\n"; \
+				podman pod rm -f $$POD_NAME 2>/dev/null || true; \
+			fi; \
+		fi; \
 		$(call container-compose,up -d) >/dev/null 2>&1 || true; \
 		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"; \
 	fi; \
@@ -467,6 +474,13 @@ devenv-update-template:
 	@if [ -f .devcontainer/docker-compose.yml ]; then \
 		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновление Docker образа и пересоздание контейнера...\n"; \
 		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) pull 2>&1 | grep -v "Trying to pull\|Writing manifest" || true; \
+		if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
+			POD_NAME=$$(podman pod ls --format "{{.Name}}" 2>/dev/null | grep devcontainer | head -1); \
+			if [ -n "$$POD_NAME" ]; then \
+				printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Удаление старого pod: $$POD_NAME...\n"; \
+				podman pod rm -f $$POD_NAME 2>/dev/null || true; \
+			fi; \
+		fi; \
 		$(call container-compose,up -d) >/dev/null 2>&1 || true; \
 		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"; \
 	fi
