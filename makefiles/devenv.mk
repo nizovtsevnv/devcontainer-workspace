@@ -429,13 +429,16 @@ devenv-update-project:
 		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"; \
 		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Исправление прав доступа к файлам...\n"; \
 		if command -v podman >/dev/null 2>&1; then \
-			if podman unshare chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null; then \
-				printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа исправлены (podman unshare)\n"; \
-			elif sudo -n chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null; then \
-				printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа исправлены (sudo)\n"; \
+			CURRENT_OWNER=$$(stat -c '%u' . 2>/dev/null || echo "$(HOST_UID)"); \
+			if [ "$$CURRENT_OWNER" != "$(HOST_UID)" ]; then \
+				if sudo -n chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null; then \
+					printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа исправлены\n"; \
+				else \
+					printf "  $(COLOR_WARNING)⚠$(COLOR_RESET) Требуется sudo для исправления прав\n"; \
+					printf "  $(COLOR_INFO)Выполните:$(COLOR_RESET) sudo chown -R $(HOST_UID):$(HOST_GID) .\n"; \
+				fi; \
 			else \
-				printf "  $(COLOR_WARNING)⚠$(COLOR_RESET) Не удалось исправить права автоматически\n"; \
-				printf "  $(COLOR_INFO)Выполните вручную:$(COLOR_RESET) sudo chown -R $(HOST_UID):$(HOST_GID) .\n"; \
+				printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа корректны\n"; \
 			fi; \
 		fi; \
 	fi; \
@@ -482,13 +485,16 @@ devenv-update-template:
 		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"; \
 		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Исправление прав доступа к файлам...\n"; \
 		if command -v podman >/dev/null 2>&1; then \
-			if podman unshare chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null; then \
-				printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа исправлены (podman unshare)\n"; \
-			elif sudo -n chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null; then \
-				printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа исправлены (sudo)\n"; \
+			CURRENT_OWNER=$$(stat -c '%u' . 2>/dev/null || echo "$(HOST_UID)"); \
+			if [ "$$CURRENT_OWNER" != "$(HOST_UID)" ]; then \
+				if sudo -n chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null; then \
+					printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа исправлены\n"; \
+				else \
+					printf "  $(COLOR_WARNING)⚠$(COLOR_RESET) Требуется sudo для исправления прав\n"; \
+					printf "  $(COLOR_INFO)Выполните:$(COLOR_RESET) sudo chown -R $(HOST_UID):$(HOST_GID) .\n"; \
+				fi; \
 			else \
-				printf "  $(COLOR_WARNING)⚠$(COLOR_RESET) Не удалось исправить права автоматически\n"; \
-				printf "  $(COLOR_INFO)Выполните вручную:$(COLOR_RESET) sudo chown -R $(HOST_UID):$(HOST_GID) .\n"; \
+				printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа корректны\n"; \
 			fi; \
 		fi; \
 	fi
