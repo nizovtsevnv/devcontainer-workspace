@@ -14,7 +14,8 @@ if [ -d "$WORKSPACE_DIR" ]; then
     WORKSPACE_GID=$(stat -c '%g' "$WORKSPACE_DIR" 2>/dev/null || echo "$CURRENT_GID")
 
     # Если GID пользователя не совпадает с GID /workspace
-    if [ "$CURRENT_GID" != "$WORKSPACE_GID" ]; then
+    # Не пытаемся изменить GID на 0 (root) - это запрещено и не нужно
+    if [ "$CURRENT_GID" != "$WORKSPACE_GID" ] && [ "$WORKSPACE_GID" != "0" ]; then
         echo "⚙️  Настройка GID пользователя: ${CURRENT_GID} → ${WORKSPACE_GID}"
 
         # Изменить GID пользователя и перезапустить с правильной группой
