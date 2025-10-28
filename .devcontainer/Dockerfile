@@ -202,8 +202,13 @@ RUN curl -fsSL https://bun.sh/install | bash
 # ===================================
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly \
   && . $HOME/.cargo/env \
-  && rustup component add rustfmt clippy rust-analyzer \
-  && cargo install cargo-watch cargo-edit cargo-outdated
+  && rustup component add rustfmt clippy rust-analyzer
+
+# Установка cargo утилит с кэшированием для ускорения сборки
+RUN --mount=type=cache,target=/home/developer/.cargo/registry,uid=1000,gid=1000 \
+    --mount=type=cache,target=/home/developer/.cargo/git,uid=1000,gid=1000 \
+    . $HOME/.cargo/env \
+    && cargo install cargo-watch cargo-edit cargo-outdated
 
 # ===================================
 # Настройка окружения и PATH
