@@ -15,19 +15,7 @@ else
 		$(call log-error,Файл $(COMPOSE_FILE) не найден); \
 		exit 1; \
 	fi
-	@# Для Podman: исправить права если они принадлежат subuid namespace
-	@if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
-		CURRENT_OWNER=$$(stat -c '%u' . 2>/dev/null || echo "$(HOST_UID)"); \
-		if [ "$$CURRENT_OWNER" != "$(HOST_UID)" ] && [ "$$CURRENT_OWNER" != "0" ]; then \
-			printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Исправление прав доступа (владелец: $$CURRENT_OWNER → $(HOST_UID))...\n"; \
-			if sudo -n chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null; then \
-				printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права исправлены\n"; \
-			else \
-				printf "  $(COLOR_WARNING)⚠$(COLOR_RESET) Требуется sudo: chown -R $(HOST_UID):$(HOST_GID) .\n"; \
-			fi; \
-		fi; \
-	fi
-	@$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) up -d
+	@$(call container-compose,up -d)
 	@$(call log-success,DevContainer запущен: $(DEVCONTAINER_SERVICE))
 	@printf "\n"
 endif
@@ -39,7 +27,7 @@ ifeq ($(IS_INSIDE_CONTAINER),0)
 else
 	@$(call log-section,Остановка DevContainer)
 	@if $(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) ps 2>/dev/null | grep -q "Up"; then \
-		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) down; \
+		$(call container-compose,down); \
 		$(call log-success,DevContainer остановлен); \
 	else \
 		$(call log-warning,DevContainer уже остановлен); \
