@@ -425,6 +425,17 @@ devenv-update-project:
 	if [ -f .devcontainer/docker-compose.yml ]; then \
 		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновление Docker образа и пересоздание контейнера...\n"; \
 		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) pull 2>&1 | grep -v "Trying to pull\|Writing manifest" || true; \
+		if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
+			CURRENT_OWNER=$$(stat -c '%u' . 2>/dev/null || echo "$(HOST_UID)"); \
+			if [ "$$CURRENT_OWNER" != "$(HOST_UID)" ] && [ "$$CURRENT_OWNER" != "0" ]; then \
+				printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Исправление прав доступа (владелец: $$CURRENT_OWNER → $(HOST_UID))...\n"; \
+				if sudo -n chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null; then \
+					printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права исправлены\n"; \
+				else \
+					printf "  $(COLOR_WARNING)⚠$(COLOR_RESET) Требуется sudo: chown -R $(HOST_UID):$(HOST_GID) .\n"; \
+				fi; \
+			fi; \
+		fi; \
 		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) up -d >/dev/null 2>&1 || true; \
 		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"; \
 	fi; \
@@ -467,6 +478,17 @@ devenv-update-template:
 	@if [ -f .devcontainer/docker-compose.yml ]; then \
 		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновление Docker образа и пересоздание контейнера...\n"; \
 		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) pull 2>&1 | grep -v "Trying to pull\|Writing manifest" || true; \
+		if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
+			CURRENT_OWNER=$$(stat -c '%u' . 2>/dev/null || echo "$(HOST_UID)"); \
+			if [ "$$CURRENT_OWNER" != "$(HOST_UID)" ] && [ "$$CURRENT_OWNER" != "0" ]; then \
+				printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Исправление прав доступа (владелец: $$CURRENT_OWNER → $(HOST_UID))...\n"; \
+				if sudo -n chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null; then \
+					printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права исправлены\n"; \
+				else \
+					printf "  $(COLOR_WARNING)⚠$(COLOR_RESET) Требуется sudo: chown -R $(HOST_UID):$(HOST_GID) .\n"; \
+				fi; \
+			fi; \
+		fi; \
 		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) up -d >/dev/null 2>&1 || true; \
 		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"; \
 	fi
