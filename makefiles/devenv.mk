@@ -8,6 +8,28 @@
 # Вспомогательные функции
 # ===================================
 
+# Функция вывода справки по devenv командам
+define devenv-help
+	STATUS="не инициализирован"; \
+	if git remote get-url template >/dev/null 2>&1; then \
+		ORIGIN_URL=$$(git remote get-url origin 2>/dev/null || echo ""); \
+		TEMPLATE_URL=$$(git remote get-url template 2>/dev/null || echo ""); \
+		if [ -z "$$ORIGIN_URL" ]; then \
+			STATUS="инициализирован"; \
+		else \
+			ORIGIN_NORM=$$(echo "$$ORIGIN_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
+			TEMPLATE_NORM=$$(echo "$$TEMPLATE_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
+			if [ "$$ORIGIN_NORM" != "$$TEMPLATE_NORM" ]; then \
+				STATUS="инициализирован"; \
+			fi; \
+		fi; \
+	fi; \
+	if [ "$$STATUS" = "не инициализирован" ]; then \
+		printf "  $(COLOR_SUCCESS)make devenv init      $(COLOR_RESET)Инициализация проекта из шаблона\n"; \
+	fi; \
+	printf "  $(COLOR_SUCCESS)make devenv update    $(COLOR_RESET)Обновить версию шаблона\n"; \
+	printf "  $(COLOR_SUCCESS)make devenv version   $(COLOR_RESET)Текущая и актуальная версия шаблона\n"
+endef
 
 # ===================================
 # Диспетчер подкоманд devenv
@@ -19,10 +41,8 @@ DEVENV_CMD := $(word 2,$(MAKECMDGOALS))
 ## devenv: Команды управления шаблоном (init, version, update)
 devenv:
 	@if [ -z "$(DEVENV_CMD)" ]; then \
-		$(call log-section,Команды управления шаблоном разработки); \
-		printf "  $(COLOR_INFO)make devenv init$(COLOR_RESET)      - инициализация проекта из шаблона\n"; \
-		printf "  $(COLOR_INFO)make devenv version$(COLOR_RESET)   - показать версию шаблона\n"; \
-		printf "  $(COLOR_INFO)make devenv update$(COLOR_RESET)    - обновить из upstream\n"; \
+		$(call log-section,Команды управления шаблоном проекта); \
+		$(call devenv-help); \
 		exit 0; \
 	elif [ "$(DEVENV_CMD)" = "init" ]; then \
 		$(MAKE) devenv-init-internal; \
@@ -94,9 +114,26 @@ devenv-init-internal:
 	echo "$$CURRENT_VERSION" > .template-version; \
 	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Версия шаблона: $$CURRENT_VERSION\n"
 
+	@# Создание README проекта (до удаления файлов шаблона!)
+	@printf "\n$(COLOR_INFO)Создать README.md проекта? [Y/n]:$(COLOR_RESET) "; \
+	read CREATE_README; \
+	if [ "$$CREATE_README" != "n" ] && [ "$$CREATE_README" != "N" ]; then \
+		if [ -f "README.project.md" ]; then \
+			cp README.project.md README.md; \
+			printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) README.md создан из шаблона\n"; \
+		else \
+			echo "# My Project" > README.md; \
+			echo "" >> README.md; \
+			echo "Проект создан из [DevContainer Workspace](https://github.com/nizovtsevnv/devcontainer-workspace)" >> README.md; \
+			printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) README.md создан\n"; \
+		fi; \
+	else \
+		printf "  $(COLOR_INFO)ℹ$(COLOR_RESET) README.md не создан (можно создать позже)\n"; \
+	fi
+
 	@# Удаление файлов шаблона
 	@$(call log-info,Удаление файлов шаблона...)
-	@for file in .github/ README.md README.project.md; do \
+	@for file in .github/ README.project.md; do \
 		if [ -e "$$file" ]; then \
 			printf "  $(COLOR_WARNING)✗$(COLOR_RESET) $$file\n"; \
 			rm -rf "$$file"; \

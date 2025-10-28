@@ -10,11 +10,8 @@ help:
 
 	@# Секция: Среда разработки
 	@printf "$(COLOR_INFO)Среда разработки:$(COLOR_RESET)\n"
-	@$(call print-commands-table,"^## (up|down|sh|exec|version):")
-	@# Добавить devenv команды вручную с правильным описанием
-	@printf "  $(COLOR_SUCCESS)make devenv init      $(COLOR_RESET)Удаление артефактов шаблона (выполняется автоматически)\n"
-	@printf "  $(COLOR_SUCCESS)make devenv version   $(COLOR_RESET)Текущая и актуальная версия шаблона\n"
-	@printf "  $(COLOR_SUCCESS)make devenv update    $(COLOR_RESET)Обновить из upstream шаблона\n"
+	@$(call print-commands-table,"^## (down|exec|sh|up|version):")
+	@$(call devenv-help)
 
 	@# Секция: Модули проекта
 	@printf "\n$(COLOR_INFO)Модули проекта:$(COLOR_RESET)\n"
@@ -53,6 +50,8 @@ help:
 			fi; \
 			printf "\n"; \
 		done; \
+		printf "\n  Используйте: $(COLOR_INFO)make <модуль>$(COLOR_RESET) для просмотра доступных команд\n"; \
+		printf "  Пример: $(COLOR_SUCCESS)make hello install$(COLOR_RESET), $(COLOR_SUCCESS)make hello test$(COLOR_RESET), $(COLOR_SUCCESS)make hello build$(COLOR_RESET)\n"; \
 	else \
 		printf "  В каталоге modules/ ничего нет\n"; \
 	fi

@@ -262,9 +262,9 @@ sudo usermod -aG docker $USER
 
 ```bash
 # Команды шаблона
-make devenv version        # Текущая и актуальная версия шаблона
-make devenv update         # Обновить из upstream шаблона
 make devenv init           # Ручная инициализация (если нужно)
+make devenv update         # Обновить версию шаблона
+make devenv version        # Текущая и актуальная версия шаблона
 
 # Управление средой разработки
 make up                    # Запуск DevContainer (с авто-инициализацией)

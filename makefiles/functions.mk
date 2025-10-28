@@ -81,5 +81,6 @@ endef
 define print-commands-table
 	grep -hE $(1) $(MAKEFILE_LIST) | \
 		sed 's/^## //' | \
+		sort | \
 		awk 'BEGIN {FS = ": "}; {printf "  $(COLOR_SUCCESS)make %-16s$(COLOR_RESET) %s\n", $$1, $$2}'
 endef
