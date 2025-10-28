@@ -283,7 +283,12 @@ devenv-update-internal:
 	fi; \
 	\
 	$(call log-info,Выполнение merge...); \
-	if git merge --allow-unrelated-histories --no-commit --no-ff "template/$$TARGET_VERSION" 2>&1; then \
+	if [ "$$TARGET_VERSION" = "main" ]; then \
+		MERGE_REF="template/main"; \
+	else \
+		MERGE_REF="$$TARGET_VERSION"; \
+	fi; \
+	if git merge --allow-unrelated-histories --no-commit --no-ff "$$MERGE_REF" 2>&1; then \
 		printf "  $(COLOR_SUCCESS)✓ Merge выполнен успешно$(COLOR_RESET)\n"; \
 		\
 		if [ "$$TARGET_VERSION" != "main" ]; then \
