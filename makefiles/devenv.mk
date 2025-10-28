@@ -190,11 +190,16 @@ devenv-version-internal:
 	if git remote get-url template >/dev/null 2>&1; then \
 		ORIGIN_URL=$$(git remote get-url origin 2>/dev/null || echo ""); \
 		TEMPLATE_URL=$$(git remote get-url template 2>/dev/null || echo ""); \
-		ORIGIN_NORM=$$(echo "$$ORIGIN_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
-		TEMPLATE_NORM=$$(echo "$$TEMPLATE_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
-		if [ -n "$$ORIGIN_URL" ] && [ -n "$$TEMPLATE_URL" ] && [ "$$ORIGIN_NORM" != "$$TEMPLATE_NORM" ]; then \
+		if [ -z "$$ORIGIN_URL" ]; then \
 			STATUS="инициализирован"; \
 			REMOTE="template"; \
+		else \
+			ORIGIN_NORM=$$(echo "$$ORIGIN_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
+			TEMPLATE_NORM=$$(echo "$$TEMPLATE_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
+			if [ "$$ORIGIN_NORM" != "$$TEMPLATE_NORM" ]; then \
+				STATUS="инициализирован"; \
+				REMOTE="template"; \
+			fi; \
 		fi; \
 	fi; \
 	\
@@ -248,10 +253,14 @@ devenv-update-internal:
 	if git remote get-url template >/dev/null 2>&1; then \
 		ORIGIN_URL=$$(git remote get-url origin 2>/dev/null || echo ""); \
 		TEMPLATE_URL=$$(git remote get-url template 2>/dev/null || echo ""); \
-		ORIGIN_NORM=$$(echo "$$ORIGIN_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
-		TEMPLATE_NORM=$$(echo "$$TEMPLATE_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
-		if [ -n "$$ORIGIN_URL" ] && [ -n "$$TEMPLATE_URL" ] && [ "$$ORIGIN_NORM" != "$$TEMPLATE_NORM" ]; then \
+		if [ -z "$$ORIGIN_URL" ]; then \
 			STATUS="инициализирован"; \
+		else \
+			ORIGIN_NORM=$$(echo "$$ORIGIN_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
+			TEMPLATE_NORM=$$(echo "$$TEMPLATE_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
+			if [ "$$ORIGIN_NORM" != "$$TEMPLATE_NORM" ]; then \
+				STATUS="инициализирован"; \
+			fi; \
 		fi; \
 	fi; \
 	\
