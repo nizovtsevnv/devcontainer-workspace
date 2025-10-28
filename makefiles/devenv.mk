@@ -4,65 +4,10 @@
 
 .PHONY: devenv
 
-# Файл с метаданными шаблона
-TEMPLATE_VERSION_FILE := .template-version
-
-# Загрузить переменные из .template-version
--include $(TEMPLATE_VERSION_FILE)
-
 # ===================================
 # Вспомогательные функции
 # ===================================
 
-# Прочитать переменную из .template-version
-# $(1) - имя переменной
-define read-template-var
-$(shell grep "^$(1)=" $(TEMPLATE_VERSION_FILE) 2>/dev/null | cut -d'=' -f2-)
-endef
-
-# Обновить переменную в .template-version
-# $(1) - имя переменной, $(2) - новое значение
-define update-template-var
-@sed -i 's|^$(1)=.*|$(1)=$(2)|g' $(TEMPLATE_VERSION_FILE)
-endef
-
-# Проверка: это режим разработки шаблона?
-define check-template-dev-mode
-$(shell ORIGIN_URL=$$(git remote get-url origin 2>/dev/null || echo ""); \
-if echo "$$ORIGIN_URL" | grep -q "nizovtsevnv/devcontainer-workspace"; then \
-	echo "true"; \
-else \
-	echo "false"; \
-fi)
-endef
-
-# Проверка: инициализирован ли проект
-define check-initialized
-@if [ ! -f "$(TEMPLATE_VERSION_FILE)" ]; then \
-	$(call log-error,Файл $(TEMPLATE_VERSION_FILE) не найден!); \
-	$(call log-info,Возможно это не проект созданный из шаблона?); \
-	exit 1; \
-fi; \
-INIT_DATE="$(call read-template-var,TEMPLATE_INITIALIZED)"; \
-if [ -z "$$INIT_DATE" ]; then \
-	$(call log-warning,Проект ещё не инициализирован из шаблона); \
-	$(call log-info,Выполните: make devenv init); \
-	exit 1; \
-fi
-endef
-
-# Проверка: есть ли remote 'template'
-define ensure-template-remote
-@if ! git remote get-url template >/dev/null 2>&1; then \
-	REMOTE_URL="$(call read-template-var,TEMPLATE_REMOTE)"; \
-	if [ -z "$$REMOTE_URL" ]; then \
-		$(call log-error,TEMPLATE_REMOTE не определён в $(TEMPLATE_VERSION_FILE)); \
-		exit 1; \
-	fi; \
-	$(call log-info,Добавление remote 'template': $$REMOTE_URL); \
-	git remote add template "$$REMOTE_URL"; \
-fi
-endef
 
 # ===================================
 # Диспетчер подкоманд devenv
@@ -116,53 +61,57 @@ init update:
 .PHONY: devenv-init-internal
 
 devenv-init-internal:
-	@$(call log-section,Инициализация проекта из шаблона)
-
-	@# Проверка: режим разработки шаблона?
-	@IS_DEV_MODE="$(call check-template-dev-mode)"; \
-	if [ "$$IS_DEV_MODE" = "true" ]; then \
-		$(call log-error,Инициализация невозможна в режиме разработки шаблона); \
+	@printf "$(COLOR_SECTION)▶ Инициализация проекта$(COLOR_RESET)\n"; \
+	\
+	if git remote get-url template >/dev/null 2>&1; then \
+		$(call log-error,Проект уже инициализирован); \
+		$(call log-info,Remote 'template' уже существует); \
+		exit 1; \
+	fi; \
+	\
+	printf "Шаблон будет переведён в режим проекта, это действие необратимо, продолжить? [y/N]: "; \
+	read answer; \
+	if [ "$$answer" != "y" ] && [ "$$answer" != "Y" ]; then \
+		printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Отменено\n"; \
 		exit 1; \
 	fi
 
-	@# Проверка: уже инициализирован?
-	@if [ -f "$(TEMPLATE_VERSION_FILE)" ]; then \
-		INIT_DATE="$(call read-template-var,TEMPLATE_INITIALIZED)"; \
-		if [ -n "$$INIT_DATE" ]; then \
-			$(call log-error,Проект уже инициализирован ($$INIT_DATE)); \
-			$(call log-info,Для обновления используйте: make devenv update); \
-			exit 1; \
-		fi; \
-	fi
-
 	@# Удаление файлов шаблона
-	@if [ -f ".templateignore" ]; then \
-		$(call log-info,Удаление файлов шаблона...); \
-		while IFS= read -r line || [ -n "$$line" ]; do \
-			[ -z "$$line" ] && continue; \
-			[ "$${line:0:1}" = "#" ] && continue; \
-			if [ -e "$$line" ]; then \
-				printf "  $(COLOR_WARNING)✗$(COLOR_RESET) $$line\n"; \
-				rm -rf "$$line"; \
-			fi; \
-		done < .templateignore; \
-	fi
+	@$(call log-info,Удаление файлов шаблона...)
+	@for file in .github/ README.md README.project.md; do \
+		if [ -e "$$file" ]; then \
+			printf "  $(COLOR_WARNING)✗$(COLOR_RESET) $$file\n"; \
+			rm -rf "$$file"; \
+		fi; \
+	done
 
-	@# Переименование remote
-	@$(call log-info,Настройка Git remotes...)
-	@if git remote get-url origin >/dev/null 2>&1; then \
-		git remote rename origin template 2>/dev/null || true; \
-		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) origin → template\n"; \
-	fi
+	@# Пересоздание Git репозитория
+	@$(call log-info,Инициализация Git репозитория...)
+	@TEMPLATE_URL=$$(git remote get-url origin 2>/dev/null); \
+	if [ -z "$$TEMPLATE_URL" ]; then \
+		$(call log-error,Не удалось определить URL шаблона из origin); \
+		$(call log-info,Убедитесь что вы клонировали шаблон через git clone); \
+		exit 1; \
+	fi; \
+	printf "  $(COLOR_INFO)ℹ$(COLOR_RESET) Сохранён URL шаблона: $$TEMPLATE_URL\n"; \
+	\
+	rm -rf .git; \
+	printf "  $(COLOR_WARNING)✗$(COLOR_RESET) Удалена история шаблона (.git/)\n"; \
+	\
+	git init -q; \
+	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Создан новый репозиторий\n"; \
+	\
+	git remote add template "$$TEMPLATE_URL"; \
+	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Добавлен remote 'template'\n"
 
 	@# Интерактивный выбор нового origin
 	@printf "\n$(COLOR_INFO)URL нового origin? [Enter для skip]:$(COLOR_RESET) "; \
 	read NEW_ORIGIN; \
 	if [ -n "$$NEW_ORIGIN" ]; then \
 		git remote add origin "$$NEW_ORIGIN"; \
-		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Добавлен origin: $$NEW_ORIGIN\n"; \
+		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Добавлен remote 'origin': $$NEW_ORIGIN\n"; \
 	else \
-		printf "  $(COLOR_WARNING)⊘$(COLOR_RESET) origin не настроен\n"; \
+		printf "  $(COLOR_INFO)ℹ$(COLOR_RESET) Remote 'origin' не настроен (можно добавить позже)\n"; \
 	fi
 
 	@# Создание README проекта
@@ -189,19 +138,13 @@ devenv-init-internal:
 		printf "  $(COLOR_WARNING)⊘$(COLOR_RESET) Правило modules/*/ не найдено в .gitignore\n"; \
 	fi
 
-	@# Обновление TEMPLATE_INITIALIZED
-	@$(call log-info,Обновление метаданных...)
-	@INIT_DATE=$$(date +%Y-%m-%d); \
-	$(call update-template-var,TEMPLATE_INITIALIZED,$$INIT_DATE); \
-	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) TEMPLATE_INITIALIZED=$$INIT_DATE\n"
-
-	@# Коммит изменений
-	@printf "\n$(COLOR_INFO)Закоммитить изменения? [Y/n]:$(COLOR_RESET) "; \
+	@# Initial commit
+	@printf "\n$(COLOR_INFO)Создать initial commit? [Y/n]:$(COLOR_RESET) "; \
 	read DO_COMMIT; \
 	if [ "$$DO_COMMIT" != "n" ] && [ "$$DO_COMMIT" != "N" ]; then \
-		git add $(TEMPLATE_VERSION_FILE) README.md 2>/dev/null || true; \
+		git add . 2>/dev/null || true; \
 		git commit -m "chore: initialize project from devcontainer-workspace template" 2>/dev/null || true; \
-		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Изменения закоммичены\n"; \
+		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Initial commit создан\n"; \
 	fi
 
 	@printf "\n$(COLOR_SUCCESS)✓ Проект успешно инициализирован!$(COLOR_RESET)\n"
@@ -219,39 +162,37 @@ devenv-init-internal:
 devenv-version-internal:
 	@$(call log-section,Текущий статус шаблона разработки)
 
-	@# Проверить наличие .template-version
-	@if [ ! -f "$(TEMPLATE_VERSION_FILE)" ]; then \
-		$(call log-error,Файл $(TEMPLATE_VERSION_FILE) не найден!); \
-		$(call log-info,Возможно это не проект созданный из шаблона?); \
-		exit 1; \
-	fi
-
-	@# Прочитать метаданные
-	@CURRENT_VERSION="$(call read-template-var,TEMPLATE_VERSION)"; \
-	INIT_DATE="$(call read-template-var,TEMPLATE_INITIALIZED)"; \
-	\
-	printf "  Версия:        $$CURRENT_VERSION\n"; \
-	if [ -n "$$INIT_DATE" ]; then \
-		printf "  Инициализация: $$INIT_DATE\n"; \
+	@# Определить текущую версию и статус
+	@if git remote get-url template >/dev/null 2>&1; then \
+		CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null || echo "unknown"); \
+		printf "  Версия:        $$CURRENT_VERSION\n"; \
+		printf "  Статус:        $(COLOR_SUCCESS)инициализирован$(COLOR_RESET)\n"; \
 	else \
-		printf "  Инициализация: $(COLOR_WARNING)не выполнена (выполнится автоматически при make up)$(COLOR_RESET)\n"; \
+		CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null || echo "unknown"); \
+		printf "  Версия:        $$CURRENT_VERSION\n"; \
+		printf "  Статус:        $(COLOR_WARNING)не инициализирован (выполните: make devenv init)$(COLOR_RESET)\n"; \
+		printf "\n$(COLOR_INFO)Для проверки обновлений требуется инициализация$(COLOR_RESET)\n"; \
+		exit 0; \
 	fi
 
 	@# Проверить актуальную версию
-	@$(call ensure-template-remote)
 	@printf "\n$(COLOR_INFO)Проверка обновлений...$(COLOR_RESET)\n"
 	@if ! git fetch template --tags >/dev/null 2>&1; then \
 		$(call log-error,Не удалось fetch из template remote); \
 		exit 1; \
 	fi
 
-	@# Получить последний tag
+	@# Получить последний tag и сравнить с текущей версией
 	@LATEST_TAG=$$(git ls-remote --tags template 2>/dev/null | grep -v '\^{}' | awk '{print $$2}' | sed 's|refs/tags/||' | sort -V | tail -1); \
-	CURRENT_VERSION="$(call read-template-var,TEMPLATE_VERSION)"; \
+	CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null || echo "unknown"); \
 	\
 	if [ -z "$$LATEST_TAG" ]; then \
 		$(call log-warning,Теги не найдены в upstream); \
 		printf "\n  Используйте: make devenv update для обновления до main\n"; \
+	elif [ "$$CURRENT_VERSION" = "unknown" ]; then \
+		printf "  $(COLOR_WARNING)Текущая версия неизвестна (нет git tag)$(COLOR_RESET)\n"; \
+		printf "  $(COLOR_INFO)Последняя версия template: $$LATEST_TAG$(COLOR_RESET)\n"; \
+		printf "\n  Обновить: $(COLOR_SUCCESS)make devenv update$(COLOR_RESET)\n"; \
 	elif [ "$$LATEST_TAG" = "$$CURRENT_VERSION" ]; then \
 		printf "  $(COLOR_SUCCESS)✓ У вас актуальная версия$(COLOR_RESET)\n"; \
 	else \
@@ -271,14 +212,12 @@ devenv-version-internal:
 devenv-update-internal:
 	@$(call log-section,Обновление из upstream)
 
-	@# Проверить наличие .template-version
-	@if [ ! -f "$(TEMPLATE_VERSION_FILE)" ]; then \
-		$(call log-error,Файл $(TEMPLATE_VERSION_FILE) не найден!); \
-		$(call log-info,Возможно это не проект созданный из шаблона?); \
+	@# Проверить наличие remote 'template'
+	@if ! git remote get-url template >/dev/null 2>&1; then \
+		$(call log-error,Remote 'template' не найден); \
+		$(call log-info,Добавьте его вручную: git remote add template <URL>); \
 		exit 1; \
 	fi
-
-	@$(call ensure-template-remote)
 
 	@# Проверка: есть uncommitted changes
 	@if ! git diff-index --quiet HEAD -- 2>/dev/null; then \
@@ -293,7 +232,7 @@ devenv-update-internal:
 	@git fetch template --tags
 
 	@# Показать доступные версии
-	@CURRENT_VERSION="$(call read-template-var,TEMPLATE_VERSION)"; \
+	@CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null || echo "unknown"); \
 	printf "\n$(COLOR_INFO)Доступные версии:$(COLOR_RESET)\n"; \
 	git tag --list | sort -V | tail -5 | while read tag; do \
 		if [ "$$tag" = "$$CURRENT_VERSION" ]; then \
@@ -331,8 +270,6 @@ devenv-update-internal:
 			NEW_VERSION=$$(git describe --tags template/main 2>/dev/null || echo "main"); \
 		fi; \
 		\
-		$(call update-template-var,TEMPLATE_VERSION,$$NEW_VERSION); \
-		git add $(TEMPLATE_VERSION_FILE); \
 		git commit -m "chore: update devenv template to $$NEW_VERSION" || true; \
 		\
 		printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \

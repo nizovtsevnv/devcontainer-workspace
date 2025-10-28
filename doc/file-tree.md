@@ -3,12 +3,10 @@
 ```
 /
 ├── .editorconfig                 # Настройки форматирования кода для всех редакторов
-├── .template-version             # Метаданные шаблона (версия, remote, дата инициализации)
-├── .templateignore               # Файлы шаблона для удаления при инициализации
 ├── .git/                         # Git repository
 ├── .gitignore                    # Базовые Git ignore правила
 ├── .gitmodules                   # Конфигурация git субмодулей
-├── .github/
+├── .github/                      # GitHub workflows (только в шаблоне, удаляется при инициализации)
 │   └── workflows/
 │       └── build-devcontainer.yml  # GitHub Actions: автосборка и публикация Docker образа
 ├── .devcontainer/
@@ -17,8 +15,8 @@
 │   ├── Dockerfile                # Образ среды разработки (Debian, Node.js, PHP, Python, Rust)
 │   └── entrypoint.sh             # Инициализация контейнера (UID/GID маппинг)
 ├── Makefile                      # Главный makefile с системой многоуровневых команд
-├── README.md                     # Документация шаблона
-├── README.project.md             # Шаблон README для нового проекта
+├── README.md                     # Документация (шаблона или проекта)
+├── README.project.md             # Шаблон README для нового проекта (удаляется при инициализации)
 ├── makefiles/                    # Модули системы автоматизации
 │   ├── config.mk                 # Конфигурация, переменные, определение окружения
 │   ├── functions.mk              # Переиспользуемые функции (логирование, утилиты)
@@ -29,7 +27,8 @@
 │   └── help.mk                   # Система справки
 ├── config/                       # Конфигурации единых стандартов качества
 │   ├── php/                      # PHP стандарты (php-cs-fixer, phpcs, phpstan)
-│   ├── node/                     # Node.js стандарты (eslint, prettier)
+│   ├── javascript/               # JavaScript/TypeScript стандарты (eslint, prettier)
+│   ├── python/                   # Python стандарты (black, flake8, pylint, mypy)
 │   └── rust/                     # Rust стандарты (rustfmt, clippy)
 ├── doc/                          # Документация workspace
 │   ├── makefile.md               # Документация системы автоматизации
@@ -38,3 +37,9 @@
 └── modules/                      # Git субмодули (компоненты проекта: сервисы, приложения, библиотеки)
     └── .gitkeep                  # Placeholder для защиты каталога от удаления из Git
 ```
+
+## Примечания
+
+- **Метаданные шаблона**: версия определяется из git tags (`git describe --tags`)
+- **Статус инициализации**: определяется наличием git remote 'template'
+- **Файлы удаляемые при `make devenv init`**: `.github/`, `README.md`, `README.project.md`

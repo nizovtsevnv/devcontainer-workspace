@@ -9,17 +9,6 @@ up:
 ifeq ($(IS_INSIDE_CONTAINER),0)
 	@$(call log-warning,Уже внутри контейнера)
 else
-	@# Проверка: режим разработки шаблона?
-	@IS_DEV_MODE="$(call check-template-dev-mode)"; \
-	if [ "$$IS_DEV_MODE" = "false" ]; then \
-		if [ -f ".template-version" ]; then \
-			INIT_DATE=$$(grep "^TEMPLATE_INITIALIZED=" .template-version 2>/dev/null | cut -d'=' -f2-); \
-			if [ -z "$$INIT_DATE" ]; then \
-				printf "\033[0;36mℹ INFO:\033[0m %s\n" "Первый запуск: требуется инициализация проекта"; \
-				$(MAKE) devenv init || exit 1; \
-			fi; \
-		fi; \
-	fi
 	@$(call log-section,Запуск DevContainer)
 	@$(call check-command,$(CONTAINER_RUNTIME))
 	@if [ ! -f "$(COMPOSE_FILE)" ]; then \
@@ -28,6 +17,7 @@ else
 	fi
 	@$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) up -d
 	@$(call log-success,DevContainer запущен: $(DEVCONTAINER_SERVICE))
+	@printf "\n"
 endif
 
 ## down: Остановка DevContainer
