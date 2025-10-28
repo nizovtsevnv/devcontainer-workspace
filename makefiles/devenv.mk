@@ -427,14 +427,17 @@ devenv-update-project:
 		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) pull 2>&1 | grep -v "Trying to pull\|Writing manifest" || true; \
 		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) up -d --force-recreate >/dev/null 2>&1 || true; \
 		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"; \
-		\
-		printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Исправление прав доступа к файлам...\n"; \
-		if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
-			$(CONTAINER_RUNTIME) unshare chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null || \
-			sudo chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null || \
-			printf "  $(COLOR_WARNING)⚠$(COLOR_RESET) Не удалось исправить права (требуется sudo)\n"; \
+		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Исправление прав доступа к файлам...\n"; \
+		if command -v podman >/dev/null 2>&1; then \
+			if podman unshare chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null; then \
+				printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа исправлены (podman unshare)\n"; \
+			elif sudo -n chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null; then \
+				printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа исправлены (sudo)\n"; \
+			else \
+				printf "  $(COLOR_WARNING)⚠$(COLOR_RESET) Не удалось исправить права автоматически\n"; \
+				printf "  $(COLOR_INFO)Выполните вручную:$(COLOR_RESET) sudo chown -R $(HOST_UID):$(HOST_GID) .\n"; \
+			fi; \
 		fi; \
-		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа исправлены\n"; \
 	fi; \
 	\
 	printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \
@@ -477,14 +480,17 @@ devenv-update-template:
 		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) pull 2>&1 | grep -v "Trying to pull\|Writing manifest" || true; \
 		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) up -d --force-recreate >/dev/null 2>&1 || true; \
 		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"; \
-		\
-		printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Исправление прав доступа к файлам...\n"; \
-		if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
-			$(CONTAINER_RUNTIME) unshare chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null || \
-			sudo chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null || \
-			printf "  $(COLOR_WARNING)⚠$(COLOR_RESET) Не удалось исправить права (требуется sudo)\n"; \
+		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Исправление прав доступа к файлам...\n"; \
+		if command -v podman >/dev/null 2>&1; then \
+			if podman unshare chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null; then \
+				printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа исправлены (podman unshare)\n"; \
+			elif sudo -n chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null; then \
+				printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа исправлены (sudo)\n"; \
+			else \
+				printf "  $(COLOR_WARNING)⚠$(COLOR_RESET) Не удалось исправить права автоматически\n"; \
+				printf "  $(COLOR_INFO)Выполните вручную:$(COLOR_RESET) sudo chown -R $(HOST_UID):$(HOST_GID) .\n"; \
+			fi; \
 		fi; \
-		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа исправлены\n"; \
 	fi
 
 	@# Определить версию шаблона через git
