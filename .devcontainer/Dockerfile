@@ -76,10 +76,6 @@ RUN npm install -g \
   nodemon \
   pm2
 
-# Установка bun (современный пакетный менеджер для Node.js)
-RUN curl -fsSL https://bun.sh/install | bash \
-  && ln -s /root/.bun/bin/bun /usr/local/bin/bun
-
 # ===================================
 # PHP + Composer + инструменты
 # ===================================
@@ -196,6 +192,12 @@ WORKDIR /workspace
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # ===================================
+# Node.js пакетные менеджеры для пользователя
+# ===================================
+# Установка bun (современный пакетный менеджер для Node.js)
+RUN curl -fsSL https://bun.sh/install | bash
+
+# ===================================
 # Rust + cargo инструменты
 # ===================================
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly \
@@ -208,7 +210,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --de
 # ===================================
 RUN npm config set prefix "/home/$USERNAME/.npm-global"
 
-ENV PATH="/home/$USERNAME/.npm-global/bin:/home/$USERNAME/.cargo/bin:/home/$USERNAME/.composer/vendor/bin:/root/.composer/vendor/bin:/root/.bun/bin:/root/.local/bin:${PATH}"
+ENV PATH="/home/$USERNAME/.npm-global/bin:/home/$USERNAME/.cargo/bin:/home/$USERNAME/.composer/vendor/bin:/home/$USERNAME/.bun/bin:/root/.composer/vendor/bin:/root/.local/bin:${PATH}"
 
 # Настройка git для пользователя
 RUN git config --global init.defaultBranch main \
