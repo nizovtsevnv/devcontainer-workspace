@@ -322,21 +322,17 @@ devenv-update-project:
 				.template-version|Makefile|makefiles/*|.devcontainer/*) \
 					git checkout --theirs "$$conflict_file" 2>/dev/null; \
 					git add "$$conflict_file" 2>/dev/null; \
-					printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновлён файл шаблона: $$conflict_file\n"; \
 					;; \
 				doc/devenv/*) \
 					git checkout --theirs "$$conflict_file" 2>/dev/null; \
 					git add "$$conflict_file" 2>/dev/null; \
-					printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновлён файл шаблона: $$conflict_file\n"; \
 					;; \
 				README.project.md) \
 					git rm -f "$$conflict_file" 2>/dev/null || true; \
-					printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Удалён файл шаблона: $$conflict_file\n"; \
 					;; \
 				.gitignore|README.md|.editorconfig|doc/*|config/*) \
 					git checkout --ours "$$conflict_file" 2>/dev/null; \
 					git add "$$conflict_file" 2>/dev/null; \
-					printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Оставлен файл проекта: $$conflict_file\n"; \
 					;; \
 				*) \
 					printf "$(COLOR_WARNING)⚠$(COLOR_RESET) $$conflict_file (требует ручного разрешения)\n"; \
@@ -359,12 +355,10 @@ devenv-update-project:
 	\
 	if [ -f README.project.md ]; then \
 		git rm -f README.project.md >/dev/null 2>&1 || true; \
-		printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Удалён файл шаблона: README.project.md\n"; \
 	fi; \
 	\
 	if [ "$$HAS_PROJECT_GITHUB" = "no" ] && [ -d .github ]; then \
 		git rm -rf .github >/dev/null 2>&1 || true; \
-		printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Удалён каталог шаблона: .github/\n"; \
 	fi; \
 	\
 	if [ "$$TARGET_VERSION" != "main" ]; then \
@@ -375,7 +369,7 @@ devenv-update-project:
 	\
 	echo "$$NEW_VERSION" > .template-version; \
 	git add .template-version; \
-	git commit -m "chore: update devenv template to $$NEW_VERSION" || true; \
+	git commit -m "chore: update devenv template to $$NEW_VERSION" >/dev/null 2>&1 || true; \
 	\
 	printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \
 	printf "  Новая версия: $$NEW_VERSION\n"
