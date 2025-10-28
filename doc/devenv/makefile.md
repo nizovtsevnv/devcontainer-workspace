@@ -498,6 +498,5 @@ stop_grace_period: 2s
 
 ## Дополнительные ресурсы
 
-- [README.md](../README.md) - Общая документация проекта
 - [devcontainer.md](devcontainer.md) - Документация DevContainer
 - [file-tree.md](file-tree.md) - Структура проекта

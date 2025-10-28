@@ -30,10 +30,12 @@
 │   ├── javascript/               # JavaScript/TypeScript стандарты (eslint, prettier)
 │   ├── python/                   # Python стандарты (black, flake8, pylint, mypy)
 │   └── rust/                     # Rust стандарты (rustfmt, clippy)
-├── doc/                          # Документация workspace
-│   ├── makefile.md               # Документация системы автоматизации
-│   ├── devcontainer.md           # Руководство по работе с DevContainer
-│   └── file-tree.md              # Этот файл
+├── doc/                          # Документация
+│   ├── README.md                 # Описание структуры документации
+│   └── devenv/                   # Документация workspace шаблона
+│       ├── makefile.md           # Документация системы автоматизации
+│       ├── devcontainer.md       # Руководство по работе с DevContainer
+│       └── file-tree.md          # Этот файл
 └── modules/                      # Git субмодули (компоненты проекта: сервисы, приложения, библиотеки)
     └── .gitkeep                  # Placeholder для защиты каталога от удаления из Git
 ```

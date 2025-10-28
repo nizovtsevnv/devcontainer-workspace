@@ -253,34 +253,23 @@ devenv-update-internal:
 	@$(call log-info,Получение обновлений из template...)
 	@git fetch template --tags
 
-	@# Показать доступные версии
-	@CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null || echo "unknown"); \
-	printf "\n$(COLOR_INFO)Доступные версии:$(COLOR_RESET)\n"; \
-	git tag --list | sort -V | tail -5 | while read tag; do \
-		if [ "$$tag" = "$$CURRENT_VERSION" ]; then \
-			printf "  • $$tag $(COLOR_SUCCESS)(current)$(COLOR_RESET)\n"; \
-		else \
-			printf "  • $$tag\n"; \
-		fi; \
-	done; \
-	printf "  • main $(COLOR_INFO)(latest)$(COLOR_RESET)\n"
+	@# Определить текущую и последнюю версии
+	@CURRENT_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
+	LATEST_VERSION=$$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | tail -1); \
+	printf "\nТекущая версия:  $$CURRENT_VERSION\n"; \
+	printf "Последняя версия: $$LATEST_VERSION\n"
 
 	@# Интерактивный выбор версии
-	@printf "\n$(COLOR_INFO)Выберите версию [main]:$(COLOR_RESET) "; \
-	read TARGET_VERSION; \
-	TARGET_VERSION=$${TARGET_VERSION:-main}; \
-	\
-	printf "\n$(COLOR_INFO)Changelog ($$CURRENT_VERSION..template/$$TARGET_VERSION):$(COLOR_RESET)\n"; \
-	git log --oneline --decorate "$$CURRENT_VERSION..template/$$TARGET_VERSION" 2>/dev/null || { \
+	@LATEST_VERSION=$$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | tail -1); \
+	CURRENT_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
+	printf "\n$(COLOR_INFO)Changelog ($$CURRENT_VERSION..$$LATEST_VERSION):$(COLOR_RESET)\n"; \
+	git log --oneline --decorate "$$CURRENT_VERSION..$$LATEST_VERSION" 2>/dev/null || { \
 		$(call log-warning,Changelog недоступен); \
 	}; \
 	\
-	printf "\n$(COLOR_WARNING)Применить обновления? [y/N]:$(COLOR_RESET) "; \
-	read CONFIRM; \
-	if [ "$$CONFIRM" != "y" ] && [ "$$CONFIRM" != "Y" ]; then \
-		$(call log-info,Обновление отменено); \
-		exit 0; \
-	fi; \
+	printf "\n$(COLOR_INFO)Выберите версию [$$LATEST_VERSION]:$(COLOR_RESET) "; \
+	read TARGET_VERSION; \
+	TARGET_VERSION=$${TARGET_VERSION:-$$LATEST_VERSION}; \
 	\
 	$(call log-info,Выполнение merge...); \
 	if [ "$$TARGET_VERSION" = "main" ]; then \
@@ -288,29 +277,66 @@ devenv-update-internal:
 	else \
 		MERGE_REF="$$TARGET_VERSION"; \
 	fi; \
-	if git merge --allow-unrelated-histories --no-commit --no-ff "$$MERGE_REF" 2>&1; then \
+	git merge --allow-unrelated-histories --no-commit --no-ff "$$MERGE_REF" 2>&1; \
+	MERGE_STATUS=$$?; \
+	\
+	if [ $$MERGE_STATUS -eq 0 ]; then \
 		printf "  $(COLOR_SUCCESS)✓ Merge выполнен успешно$(COLOR_RESET)\n"; \
-		\
-		if [ "$$TARGET_VERSION" != "main" ]; then \
-			NEW_VERSION="$$TARGET_VERSION"; \
-		else \
-			NEW_VERSION=$$(git describe --tags template/main 2>/dev/null || echo "main"); \
-		fi; \
-		\
-		echo "$$NEW_VERSION" > .template-version; \
-		git add .template-version; \
-		git commit -m "chore: update devenv template to $$NEW_VERSION" || true; \
-		\
-		printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \
-		printf "  Новая версия: $$NEW_VERSION\n"; \
 	else \
-		printf "\n$(COLOR_ERROR)✗ Конфликты при merge!$(COLOR_RESET)\n"; \
-		printf "\n$(COLOR_INFO)Файлы с конфликтами:$(COLOR_RESET)\n"; \
-		git diff --name-only --diff-filter=U | while read file; do \
-			printf "  $(COLOR_WARNING)⚠$(COLOR_RESET)  $$file\n"; \
+		printf "  $(COLOR_INFO)ℹ$(COLOR_RESET) Обнаружены конфликты, автоматическое разрешение...\n"; \
+	fi; \
+	\
+	CONFLICTS=$$(git diff --name-only --diff-filter=U 2>/dev/null); \
+	if [ -n "$$CONFLICTS" ]; then \
+		echo "$$CONFLICTS" | while read conflict_file; do \
+			case "$$conflict_file" in \
+				.template-version|Makefile|makefiles/*|.devcontainer/*) \
+					git checkout --theirs "$$conflict_file" 2>/dev/null; \
+					git add "$$conflict_file" 2>/dev/null; \
+					printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) $$conflict_file (версия шаблона)\n"; \
+					;; \
+				doc/devenv/*) \
+					git checkout --theirs "$$conflict_file" 2>/dev/null; \
+					git add "$$conflict_file" 2>/dev/null; \
+					printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) $$conflict_file (версия шаблона)\n"; \
+					;; \
+				README.project.md|.github/*) \
+					git rm -f "$$conflict_file" 2>/dev/null || true; \
+					printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) $$conflict_file (удалён)\n"; \
+					;; \
+				.gitignore|README.md|.editorconfig|doc/*|config/*) \
+					git checkout --ours "$$conflict_file" 2>/dev/null; \
+					git add "$$conflict_file" 2>/dev/null; \
+					printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) $$conflict_file (версия проекта)\n"; \
+					;; \
+				*) \
+					printf "  $(COLOR_WARNING)⚠$(COLOR_RESET)  $$conflict_file (требует ручного разрешения)\n"; \
+					;; \
+			esac; \
 		done; \
-		printf "\n$(COLOR_INFO)Разрешите конфликты и выполните:$(COLOR_RESET)\n"; \
-		printf "  git add <файлы>\n"; \
-		printf "  git commit\n"; \
-		exit 1; \
-	fi
+		\
+		UNRESOLVED=$$(git diff --name-only --diff-filter=U 2>/dev/null); \
+		if [ -n "$$UNRESOLVED" ]; then \
+			printf "\n$(COLOR_ERROR)✗ Нерешённые конфликты:$(COLOR_RESET)\n"; \
+			echo "$$UNRESOLVED" | while read file; do \
+				printf "  $(COLOR_WARNING)⚠$(COLOR_RESET)  $$file\n"; \
+			done; \
+			printf "\n$(COLOR_INFO)Разрешите конфликты и выполните:$(COLOR_RESET)\n"; \
+			printf "  git add <файлы>\n"; \
+			printf "  git commit\n"; \
+			exit 1; \
+		fi; \
+	fi; \
+	\
+	if [ "$$TARGET_VERSION" != "main" ]; then \
+		NEW_VERSION="$$TARGET_VERSION"; \
+	else \
+		NEW_VERSION=$$(git describe --tags template/main 2>/dev/null || echo "main"); \
+	fi; \
+	\
+	echo "$$NEW_VERSION" > .template-version; \
+	git add .template-version; \
+	git commit -m "chore: update devenv template to $$NEW_VERSION" || true; \
+	\
+	printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \
+	printf "  Новая версия: $$NEW_VERSION\n"
