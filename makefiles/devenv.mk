@@ -185,43 +185,52 @@ devenv-version-internal:
 	@$(call log-section,Текущий статус шаблона разработки)
 
 	@# Определить текущую версию и статус
-	@if git remote get-url template >/dev/null 2>&1; then \
+	@STATUS="не инициализирован"; \
+	REMOTE="origin"; \
+	if git remote get-url template >/dev/null 2>&1; then \
+		ORIGIN_URL=$$(git remote get-url origin 2>/dev/null || echo ""); \
+		TEMPLATE_URL=$$(git remote get-url template 2>/dev/null || echo ""); \
+		ORIGIN_NORM=$$(echo "$$ORIGIN_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
+		TEMPLATE_NORM=$$(echo "$$TEMPLATE_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
+		if [ -n "$$ORIGIN_URL" ] && [ -n "$$TEMPLATE_URL" ] && [ "$$ORIGIN_NORM" != "$$TEMPLATE_NORM" ]; then \
+			STATUS="инициализирован"; \
+			REMOTE="template"; \
+		fi; \
+	fi; \
+	\
+	if [ "$$STATUS" = "инициализирован" ]; then \
 		TEMPLATE_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
 		printf "  Версия шаблона:  $$TEMPLATE_VERSION\n"; \
 		printf "  Статус:          $(COLOR_SUCCESS)инициализирован$(COLOR_RESET)\n"; \
 	else \
-		CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null || echo "unknown"); \
+		CURRENT_VERSION=$$(cat .template-version 2>/dev/null || git describe --tags --exact-match HEAD 2>/dev/null || echo "unknown"); \
 		printf "  Версия:          $$CURRENT_VERSION\n"; \
-		printf "  Статус:          $(COLOR_WARNING)не инициализирован (выполните: make devenv init)$(COLOR_RESET)\n"; \
-		printf "\n$(COLOR_INFO)Для проверки обновлений требуется инициализация$(COLOR_RESET)\n"; \
-		exit 0; \
-	fi
-
-	@# Проверить актуальную версию
-	@printf "\n$(COLOR_INFO)Проверка обновлений...$(COLOR_RESET)\n"
-	@if ! git fetch template --tags >/dev/null 2>&1; then \
-		$(call log-error,Не удалось fetch из template remote); \
+		printf "  Статус:          $(COLOR_WARNING)неинициализирован (разработка шаблона)$(COLOR_RESET)\n"; \
+	fi; \
+	\
+	printf "\n$(COLOR_INFO)Проверка обновлений из $$REMOTE...$(COLOR_RESET)\n"; \
+	if ! git fetch $$REMOTE --tags >/dev/null 2>&1; then \
+		$(call log-error,Не удалось fetch из $$REMOTE remote); \
 		exit 1; \
-	fi
-
-	@# Получить последний tag и сравнить с текущей версией
-	@LATEST_TAG=$$(git ls-remote --tags template 2>/dev/null | grep -v '\^{}' | awk '{print $$2}' | sed 's|refs/tags/||' | sort -V | tail -1); \
-	TEMPLATE_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
+	fi; \
+	\
+	LATEST_TAG=$$(git ls-remote --tags $$REMOTE 2>/dev/null | grep -v '\^{}' | awk '{print $$2}' | sed 's|refs/tags/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | tail -1); \
+	CURRENT_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
 	\
 	if [ -z "$$LATEST_TAG" ]; then \
 		$(call log-warning,Теги не найдены в upstream); \
-		printf "\n  Используйте: make devenv update для обновления до main\n"; \
-	elif [ "$$TEMPLATE_VERSION" = "unknown" ]; then \
+		printf "\n  Используйте: make devenv update для обновления\n"; \
+	elif [ "$$CURRENT_VERSION" = "unknown" ]; then \
 		printf "  $(COLOR_WARNING)Текущая версия неизвестна$(COLOR_RESET)\n"; \
-		printf "  $(COLOR_INFO)Последняя версия template: $$LATEST_TAG$(COLOR_RESET)\n"; \
+		printf "  $(COLOR_INFO)Последняя версия: $$LATEST_TAG$(COLOR_RESET)\n"; \
 		printf "\n  Обновить: $(COLOR_SUCCESS)make devenv update$(COLOR_RESET)\n"; \
-	elif [ "$$LATEST_TAG" = "$$TEMPLATE_VERSION" ]; then \
+	elif [ "$$LATEST_TAG" = "$$CURRENT_VERSION" ]; then \
 		printf "  $(COLOR_SUCCESS)✓ У вас актуальная версия$(COLOR_RESET)\n"; \
 	else \
 		printf "  $(COLOR_WARNING)Доступна новая версия: $$LATEST_TAG$(COLOR_RESET)\n"; \
 		printf "\n$(COLOR_INFO)Changelog:$(COLOR_RESET)\n"; \
-		git log --oneline --decorate "$$TEMPLATE_VERSION..template/main" 2>/dev/null || \
-			printf "  (недоступно, используйте: git fetch template)\n"; \
+		git log --oneline --decorate "$$CURRENT_VERSION..$$REMOTE/main" 2>/dev/null || \
+			printf "  (недоступно, используйте: git fetch $$REMOTE)\n"; \
 		printf "\n  Обновить: $(COLOR_SUCCESS)make devenv update$(COLOR_RESET)\n"; \
 	fi
 
@@ -234,8 +243,19 @@ devenv-version-internal:
 devenv-update-internal:
 	@$(call log-section,Обновление из upstream)
 
-	@# Определить статус инициализации
-	@if git remote get-url template >/dev/null 2>&1; then \
+	@# Определить статус инициализации (аналогично devenv-version)
+	@STATUS="не инициализирован"; \
+	if git remote get-url template >/dev/null 2>&1; then \
+		ORIGIN_URL=$$(git remote get-url origin 2>/dev/null || echo ""); \
+		TEMPLATE_URL=$$(git remote get-url template 2>/dev/null || echo ""); \
+		ORIGIN_NORM=$$(echo "$$ORIGIN_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
+		TEMPLATE_NORM=$$(echo "$$TEMPLATE_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
+		if [ -n "$$ORIGIN_URL" ] && [ -n "$$TEMPLATE_URL" ] && [ "$$ORIGIN_NORM" != "$$TEMPLATE_NORM" ]; then \
+			STATUS="инициализирован"; \
+		fi; \
+	fi; \
+	\
+	if [ "$$STATUS" = "инициализирован" ]; then \
 		$(MAKE) devenv-update-project; \
 	else \
 		$(MAKE) devenv-update-template; \
