@@ -25,10 +25,8 @@ export PODMAN_COMPOSE_WARNING_LOGS = 0
 
 # Для Podman: отключить user namespace mapping
 # Это обеспечивает корректные права доступа (UID в контейнере = UID на хосте)
-# Docker игнорирует эту переменную
-ifeq ($(CONTAINER_RUNTIME),podman)
-    export PODMAN_USERNS := host
-endif
+# Docker игнорирует эту переменную, безопасно экспортировать всегда
+export PODMAN_USERNS := host
 
 # Экспортировать UID и GID хоста для docker-compose
 # Это обеспечивает корректные права доступа к файлам
