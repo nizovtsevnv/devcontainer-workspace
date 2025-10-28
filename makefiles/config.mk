@@ -23,10 +23,12 @@ CONTAINER_RUNTIME := $(shell \
 # Отключить предупреждения podman-compose
 export PODMAN_COMPOSE_WARNING_LOGS = 0
 
-# Для Podman: отключить user namespace mapping
-# Это обеспечивает корректные права доступа (UID в контейнере = UID на хосте)
+# Для Podman: использовать keep-id mode для правильного маппинга UID/GID
+# keep-id сохраняет UID и GID пользователя между хостом и контейнером
+# Решает проблему с subuid namespace (файлы создаются с владельцем 100999 вместо реального UID)
 # Docker игнорирует эту переменную, безопасно экспортировать всегда
-export PODMAN_USERNS := host
+# Примечание: не может быть установлена в docker-compose.yml из-за бага podman-compose (issue #654)
+export PODMAN_USERNS = keep-id:uid=$(HOST_UID),gid=$(HOST_GID)
 
 # Экспортировать UID и GID хоста для docker-compose
 # Это обеспечивает корректные права доступа к файлам

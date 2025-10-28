@@ -86,8 +86,10 @@ define print-commands-table
 endef
 
 # Обёртка для container compose команд
-# Для Podman используется PODMAN_USERNS=host (см. config.mk)
+# Для Podman явно передаём PODMAN_USERNS для правильного маппинга UID/GID
+# Переменная экспортируется в config.mk, но make export не гарантирует передачу в subprocess
+# Поэтому передаём явно в команде
 # Использование: $(call container-compose,up -d) или $(call container-compose,down)
 define container-compose
-	$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) $(1)
+	PODMAN_USERNS="$(PODMAN_USERNS)" $(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) $(1)
 endef

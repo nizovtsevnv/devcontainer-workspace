@@ -17,7 +17,9 @@ services:
     # Автоматическое использование UID/GID хоста (экспортируется в makefiles/config.mk)
     # Обеспечивает корректные права доступа между хостом и контейнером
     # Docker: использует напрямую
-    # Podman: PODMAN_USERNS=host отключает user namespace mapping (см. makefiles/config.mk)
+    # Podman: PODMAN_USERNS=keep-id решает проблему с subuid namespace (см. makefiles/config.mk)
+    #   - userns_mode в compose.yml не работает из-за бага podman-compose (issue #654)
+    #   - Вместо этого используется environment variable PODMAN_USERNS
     # Fallback: 1000:1000
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
 

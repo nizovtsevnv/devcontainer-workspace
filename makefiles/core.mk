@@ -15,6 +15,15 @@ else
 		$(call log-error,Файл $(COMPOSE_FILE) не найден); \
 		exit 1; \
 	fi
+	@# Для Podman: удалить старый pod если существует
+	@# Старый pod может сохранять неправильные настройки userns
+	@if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
+		POD_NAME=$$(podman pod ls --format "{{.Name}}" 2>/dev/null | grep devcontainer | head -1); \
+		if [ -n "$$POD_NAME" ]; then \
+			$(call log-info,Удаление старого pod: $$POD_NAME); \
+			podman pod rm -f $$POD_NAME 2>/dev/null || true; \
+		fi; \
+	fi
 	@$(call container-compose,up -d)
 	@$(call log-success,DevContainer запущен: $(DEVCONTAINER_SERVICE))
 	@printf "\n"
