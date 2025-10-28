@@ -241,7 +241,7 @@ devenv-version-internal:
 .PHONY: devenv-update-internal
 
 devenv-update-internal:
-	@$(call log-section,Обновление из upstream)
+	@$(call log-section,Обновление версии шаблона)
 
 	@# Определить статус инициализации (аналогично devenv-version)
 	@STATUS="не инициализирован"; \
@@ -264,8 +264,6 @@ devenv-update-internal:
 # Обновление инициализированного проекта (через merge с template)
 .PHONY: devenv-update-project
 devenv-update-project:
-	@$(call log-info,Режим: инициализированный проект)
-
 	@# Проверка: есть uncommitted changes
 	@if ! git diff-index --quiet HEAD -- 2>/dev/null; then \
 		$(call log-error,Есть незакоммиченные изменения!); \
@@ -275,24 +273,24 @@ devenv-update-project:
 	fi
 
 	@# Fetch обновлений
-	@$(call log-info,Получение обновлений из template...)
-	@git fetch template --tags
+	@git fetch template --tags >/dev/null 2>&1
 
 	@# Определить текущую и последнюю версии
 	@CURRENT_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
 	LATEST_VERSION=$$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | tail -1); \
-	printf "\nТекущая версия:  $$CURRENT_VERSION\n"; \
-	printf "Последняя версия: $$LATEST_VERSION\n"
+	printf "Режим:                     $(COLOR_SUCCESS)инициализированный проект$(COLOR_RESET)\n"; \
+	printf "Текущая версия шаблона:    $$CURRENT_VERSION\n"; \
+	printf "Последняя версия шаблона:  $$LATEST_VERSION\n"
 
 	@# Интерактивный выбор версии
 	@LATEST_VERSION=$$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | tail -1); \
 	CURRENT_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
-	printf "\n$(COLOR_INFO)Changelog ($$CURRENT_VERSION..$$LATEST_VERSION):$(COLOR_RESET)\n"; \
+	printf "\nИзменения ($$CURRENT_VERSION..$$LATEST_VERSION):\n"; \
 	git log --oneline --decorate "$$CURRENT_VERSION..$$LATEST_VERSION" 2>/dev/null || { \
-		$(call log-warning,Changelog недоступен); \
+		printf "  $(COLOR_WARNING)(changelog недоступен)$(COLOR_RESET)\n"; \
 	}; \
 	\
-	printf "\n$(COLOR_INFO)Выберите версию [$$LATEST_VERSION]:$(COLOR_RESET) "; \
+	printf "\nВыберите версию [$$LATEST_VERSION]: "; \
 	read TARGET_VERSION; \
 	TARGET_VERSION=$${TARGET_VERSION:-$$LATEST_VERSION}; \
 	\
@@ -301,18 +299,13 @@ devenv-update-project:
 		HAS_PROJECT_GITHUB="yes"; \
 	fi; \
 	\
-	$(call log-info,Выполнение merge...); \
 	if [ "$$TARGET_VERSION" = "main" ]; then \
 		MERGE_REF="template/main"; \
 	else \
 		MERGE_REF="$$TARGET_VERSION"; \
 	fi; \
-	git merge --allow-unrelated-histories --no-commit --no-ff "$$MERGE_REF" 2>&1; \
+	git merge --allow-unrelated-histories --no-commit --no-ff "$$MERGE_REF" >/dev/null 2>&1; \
 	MERGE_STATUS=$$?; \
-	\
-	if [ $$MERGE_STATUS -eq 0 ]; then \
-		printf "  $(COLOR_SUCCESS)✓ Merge выполнен успешно$(COLOR_RESET)\n"; \
-	fi; \
 	\
 	CONFLICTS=$$(git diff --name-only --diff-filter=U 2>/dev/null); \
 	if [ -n "$$CONFLICTS" ]; then \
@@ -321,24 +314,24 @@ devenv-update-project:
 				.template-version|Makefile|makefiles/*|.devcontainer/*) \
 					git checkout --theirs "$$conflict_file" 2>/dev/null; \
 					git add "$$conflict_file" 2>/dev/null; \
-					printf "  $(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновлён файл шаблона: $$conflict_file\n"; \
+					printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновлён файл шаблона: $$conflict_file\n"; \
 					;; \
 				doc/devenv/*) \
 					git checkout --theirs "$$conflict_file" 2>/dev/null; \
 					git add "$$conflict_file" 2>/dev/null; \
-					printf "  $(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновлён файл шаблона: $$conflict_file\n"; \
+					printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновлён файл шаблона: $$conflict_file\n"; \
 					;; \
 				README.project.md) \
 					git rm -f "$$conflict_file" 2>/dev/null || true; \
-					printf "  $(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Удалён файл шаблона: $$conflict_file\n"; \
+					printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Удалён файл шаблона: $$conflict_file\n"; \
 					;; \
 				.gitignore|README.md|.editorconfig|doc/*|config/*) \
 					git checkout --ours "$$conflict_file" 2>/dev/null; \
 					git add "$$conflict_file" 2>/dev/null; \
-					printf "  $(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Оставлен файл проекта: $$conflict_file\n"; \
+					printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Оставлен файл проекта: $$conflict_file\n"; \
 					;; \
 				*) \
-					printf "  $(COLOR_WARNING)⚠$(COLOR_RESET)  $$conflict_file (требует ручного разрешения)\n"; \
+					printf "$(COLOR_WARNING)⚠$(COLOR_RESET) $$conflict_file (требует ручного разрешения)\n"; \
 					;; \
 			esac; \
 		done; \
@@ -356,15 +349,14 @@ devenv-update-project:
 		fi; \
 	fi; \
 	\
-	$(call log-info,Очистка артефактов шаблона...); \
 	if [ -f README.project.md ]; then \
-		git rm -f README.project.md 2>/dev/null || true; \
-		printf "  $(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Удалён файл шаблона: README.project.md\n"; \
+		git rm -f README.project.md >/dev/null 2>&1 || true; \
+		printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Удалён файл шаблона: README.project.md\n"; \
 	fi; \
 	\
 	if [ "$$HAS_PROJECT_GITHUB" = "no" ] && [ -d .github ]; then \
-		git rm -rf .github 2>/dev/null || true; \
-		printf "  $(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Удалён каталог шаблона: .github/\n"; \
+		git rm -rf .github >/dev/null 2>&1 || true; \
+		printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Удалён каталог шаблона: .github/\n"; \
 	fi; \
 	\
 	if [ "$$TARGET_VERSION" != "main" ]; then \
