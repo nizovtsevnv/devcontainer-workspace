@@ -425,22 +425,8 @@ devenv-update-project:
 	if [ -f .devcontainer/docker-compose.yml ]; then \
 		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновление Docker образа и пересоздание контейнера...\n"; \
 		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) pull 2>&1 | grep -v "Trying to pull\|Writing manifest" || true; \
-		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) up -d --force-recreate >/dev/null 2>&1 || true; \
+		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) up -d >/dev/null 2>&1 || true; \
 		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"; \
-		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Исправление прав доступа к файлам...\n"; \
-		if command -v podman >/dev/null 2>&1; then \
-			CURRENT_OWNER=$$(stat -c '%u' . 2>/dev/null || echo "$(HOST_UID)"); \
-			if [ "$$CURRENT_OWNER" != "$(HOST_UID)" ]; then \
-				if sudo -n chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null; then \
-					printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа исправлены\n"; \
-				else \
-					printf "  $(COLOR_WARNING)⚠$(COLOR_RESET) Требуется sudo для исправления прав\n"; \
-					printf "  $(COLOR_INFO)Выполните:$(COLOR_RESET) sudo chown -R $(HOST_UID):$(HOST_GID) .\n"; \
-				fi; \
-			else \
-				printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа корректны\n"; \
-			fi; \
-		fi; \
 	fi; \
 	\
 	printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \
@@ -481,22 +467,8 @@ devenv-update-template:
 	@if [ -f .devcontainer/docker-compose.yml ]; then \
 		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновление Docker образа и пересоздание контейнера...\n"; \
 		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) pull 2>&1 | grep -v "Trying to pull\|Writing manifest" || true; \
-		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) up -d --force-recreate >/dev/null 2>&1 || true; \
+		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) up -d >/dev/null 2>&1 || true; \
 		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"; \
-		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Исправление прав доступа к файлам...\n"; \
-		if command -v podman >/dev/null 2>&1; then \
-			CURRENT_OWNER=$$(stat -c '%u' . 2>/dev/null || echo "$(HOST_UID)"); \
-			if [ "$$CURRENT_OWNER" != "$(HOST_UID)" ]; then \
-				if sudo -n chown -R $(HOST_UID):$(HOST_GID) . 2>/dev/null; then \
-					printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа исправлены\n"; \
-				else \
-					printf "  $(COLOR_WARNING)⚠$(COLOR_RESET) Требуется sudo для исправления прав\n"; \
-					printf "  $(COLOR_INFO)Выполните:$(COLOR_RESET) sudo chown -R $(HOST_UID):$(HOST_GID) .\n"; \
-				fi; \
-			else \
-				printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Права доступа корректны\n"; \
-			fi; \
-		fi; \
 	fi
 
 	@# Определить версию шаблона через git
