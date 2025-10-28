@@ -17,7 +17,7 @@ services:
     # Автоматическое использование UID/GID хоста (экспортируется в makefiles/config.mk)
     # Обеспечивает корректные права доступа между хостом и контейнером
     # Docker: использует напрямую
-    # Podman: флаг --in-pod false отключает user namespace mapping (см. makefiles/functions.mk)
+    # Podman: PODMAN_USERNS=host отключает user namespace mapping (см. makefiles/config.mk)
     # Fallback: 1000:1000
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
 

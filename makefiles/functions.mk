@@ -86,12 +86,8 @@ define print-commands-table
 endef
 
 # Обёртка для container compose команд
-# Добавляет --in-pod false для Podman чтобы избежать проблем с user namespace mapping
+# Для Podman используется PODMAN_USERNS=host (см. config.mk)
 # Использование: $(call container-compose,up -d) или $(call container-compose,down)
 define container-compose
-	if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
-		$(CONTAINER_RUNTIME) compose --in-pod false -f $(COMPOSE_FILE) $(1); \
-	else \
-		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) $(1); \
-	fi
+	$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) $(1)
 endef
