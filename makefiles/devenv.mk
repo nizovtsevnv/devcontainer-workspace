@@ -92,7 +92,8 @@ devenv-init-internal:
 	else \
 		printf "  $(COLOR_INFO)ℹ$(COLOR_RESET) Текущая версия: $$CURRENT_VERSION\n"; \
 	fi; \
-	export INIT_VERSION="$$CURRENT_VERSION"
+	echo "$$CURRENT_VERSION" > .template-version; \
+	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Версия шаблона: $$CURRENT_VERSION\n"
 
 	@# Удаление файлов шаблона
 	@$(call log-info,Удаление файлов шаблона...)
@@ -123,10 +124,7 @@ devenv-init-internal:
 	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Добавлен remote 'template'\n"; \
 	\
 	git fetch template --tags >/dev/null 2>&1; \
-	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Получены теги из template\n"; \
-	\
-	git config devenv.template.version "$$INIT_VERSION"; \
-	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Версия шаблона: $$INIT_VERSION\n"
+	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Получены теги из template\n"
 
 	@# Интерактивный выбор нового origin
 	@printf "\n$(COLOR_INFO)URL нового origin? [Enter для skip]:$(COLOR_RESET) "; \
@@ -188,16 +186,7 @@ devenv-version-internal:
 
 	@# Определить текущую версию и статус
 	@if git remote get-url template >/dev/null 2>&1; then \
-		TEMPLATE_VERSION=$$(git config devenv.template.version 2>/dev/null); \
-		if [ -z "$$TEMPLATE_VERSION" ]; then \
-			git fetch template --tags >/dev/null 2>&1; \
-			MERGE_BASE=$$(git merge-base HEAD template/main 2>/dev/null); \
-			if [ -n "$$MERGE_BASE" ]; then \
-				TEMPLATE_VERSION=$$(git describe --tags --exact-match "$$MERGE_BASE" 2>/dev/null || echo "unknown"); \
-			else \
-				TEMPLATE_VERSION="unknown"; \
-			fi; \
-		fi; \
+		TEMPLATE_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
 		printf "  Версия шаблона:  $$TEMPLATE_VERSION\n"; \
 		printf "  Статус:          $(COLOR_SUCCESS)инициализирован$(COLOR_RESET)\n"; \
 	else \
@@ -217,15 +206,7 @@ devenv-version-internal:
 
 	@# Получить последний tag и сравнить с текущей версией
 	@LATEST_TAG=$$(git ls-remote --tags template 2>/dev/null | grep -v '\^{}' | awk '{print $$2}' | sed 's|refs/tags/||' | sort -V | tail -1); \
-	TEMPLATE_VERSION=$$(git config devenv.template.version 2>/dev/null); \
-	if [ -z "$$TEMPLATE_VERSION" ]; then \
-		MERGE_BASE=$$(git merge-base HEAD template/main 2>/dev/null); \
-		if [ -n "$$MERGE_BASE" ]; then \
-			TEMPLATE_VERSION=$$(git describe --tags --exact-match "$$MERGE_BASE" 2>/dev/null || echo "unknown"); \
-		else \
-			TEMPLATE_VERSION="unknown"; \
-		fi; \
-	fi; \
+	TEMPLATE_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
 	\
 	if [ -z "$$LATEST_TAG" ]; then \
 		$(call log-warning,Теги не найдены в upstream); \
@@ -311,8 +292,9 @@ devenv-update-internal:
 			NEW_VERSION=$$(git describe --tags template/main 2>/dev/null || echo "main"); \
 		fi; \
 		\
+		echo "$$NEW_VERSION" > .template-version; \
+		git add .template-version; \
 		git commit -m "chore: update devenv template to $$NEW_VERSION" || true; \
-		git config devenv.template.version "$$NEW_VERSION"; \
 		\
 		printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \
 		printf "  Новая версия: $$NEW_VERSION\n"; \
