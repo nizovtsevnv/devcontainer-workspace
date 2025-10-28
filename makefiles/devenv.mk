@@ -317,6 +317,12 @@ devenv-update-project:
 		exit 1; \
 	fi
 
+	@# Остановить контейнер если запущен (чтобы не работал на старой версии)
+	@if $(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) ps 2>/dev/null | grep -q "Up"; then \
+		$(call log-info,Остановка контейнера перед обновлением...); \
+		$(MAKE) down; \
+	fi
+
 	@# Fetch обновлений
 	@git fetch template --tags >/dev/null 2>&1
 
@@ -422,6 +428,12 @@ devenv-update-template:
 		$(call log-info,Закоммитьте или stash их перед обновлением); \
 		git status --short; \
 		exit 1; \
+	fi
+
+	@# Остановить контейнер если запущен (чтобы не работал на старой версии)
+	@if $(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) ps 2>/dev/null | grep -q "Up"; then \
+		$(call log-info,Остановка контейнера перед обновлением...); \
+		$(MAKE) down; \
 	fi
 
 	@# Определить текущую ветку
