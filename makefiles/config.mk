@@ -25,8 +25,9 @@ export PODMAN_COMPOSE_WARNING_LOGS = 0
 
 # Экспортировать UID и GID хоста для docker-compose
 # Это обеспечивает корректные права доступа к файлам
-export UID := $(shell id -u)
-export GID := $(shell id -g)
+# Используем HOST_UID/HOST_GID, т.к. GID - встроенная переменная bash
+export HOST_UID := $(shell id -u)
+export HOST_GID := $(shell id -g)
 
 # DevContainer настройки
 DEVCONTAINER_SERVICE := devcontainer-workspace-dev

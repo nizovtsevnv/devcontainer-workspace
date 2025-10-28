@@ -17,7 +17,7 @@ services:
     # Автоматическое использование UID/GID хоста (экспортируется в makefiles/config.mk)
     # Обеспечивает корректные права доступа между хостом и контейнером
     # Работает для Docker и Podman, fallback: 1000:1000
-    user: "${UID:-1000}:${GID:-1000}"
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
 
     # Keep container running
     command: /bin/bash -c "trap 'exit 0' TERM; while true; do sleep 1; done"
