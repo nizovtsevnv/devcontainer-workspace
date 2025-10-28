@@ -373,6 +373,14 @@ devenv-update-project:
 				README.project.md) \
 					git rm -f "$$conflict_file" 2>/dev/null || true; \
 					;; \
+			.github/*) \
+				if [ "$$HAS_PROJECT_GITHUB" = "no" ]; then \
+					git rm -f "$$conflict_file" 2>/dev/null || true; \
+				else \
+					git checkout --ours "$$conflict_file" 2>/dev/null; \
+					git add "$$conflict_file" 2>/dev/null; \
+				fi; \
+				;;
 				.gitignore|README.md|.editorconfig|doc/*|config/*) \
 					git checkout --ours "$$conflict_file" 2>/dev/null; \
 					git add "$$conflict_file" 2>/dev/null; \
