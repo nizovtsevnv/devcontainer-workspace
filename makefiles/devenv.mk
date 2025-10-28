@@ -422,6 +422,13 @@ devenv-update-project:
 	git add .template-version; \
 	git commit -m "chore: update devenv template to $$NEW_VERSION" >/dev/null 2>&1 || true; \
 	\
+	if [ -f .devcontainer/docker-compose.yml ]; then \
+		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновление Docker образа и пересоздание контейнера...\n"; \
+		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) pull 2>&1 | grep -v "Trying to pull\|Writing manifest" || true; \
+		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) up -d --force-recreate >/dev/null 2>&1 || true; \
+		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"; \
+	fi; \
+	\
 	printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \
 	printf "  Новая версия: $$NEW_VERSION\n"
 
@@ -454,6 +461,14 @@ devenv-update-template:
 	else \
 		$(call log-error,Не удалось выполнить git pull); \
 		exit 1; \
+	fi
+
+	@# Обновить Docker образ и пересоздать контейнер
+	@if [ -f .devcontainer/docker-compose.yml ]; then \
+		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновление Docker образа и пересоздание контейнера...\n"; \
+		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) pull 2>&1 | grep -v "Trying to pull\|Writing manifest" || true; \
+		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) up -d --force-recreate >/dev/null 2>&1 || true; \
+		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"; \
 	fi
 
 	@# Прочитать версию из .template-version
