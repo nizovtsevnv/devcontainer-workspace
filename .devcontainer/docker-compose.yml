@@ -19,10 +19,6 @@ services:
     # Работает для Docker и Podman, fallback: 1000:1000
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
 
-    # Сохранение UID пользователя в Podman (предотвращает проблемы с subuid namespace)
-    # Docker игнорирует эту опцию
-    userns_mode: "keep-id"
-
     # Keep container running
     command: /bin/bash -c "trap 'exit 0' TERM; while true; do sleep 1; done"
 

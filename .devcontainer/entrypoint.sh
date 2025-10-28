@@ -35,9 +35,14 @@ if [ -d "$WORKSPACE_DIR" ]; then
     fi
 
     # Если UID не совпадает, попробовать изменить владельца
-    if [ "$CURRENT_UID" != "$WORKSPACE_UID" ] && [ "$WORKSPACE_UID" = "0" ]; then
-        echo "⚙️  Изменение владельца /workspace: root → $(whoami)"
-        sudo chown -R "${CURRENT_UID}:${WORKSPACE_GID}" "$WORKSPACE_DIR" 2>/dev/null || true
+    # Это происходит в Podman при использовании subuid namespace
+    if [ "$CURRENT_UID" != "$WORKSPACE_UID" ]; then
+        if [ "$WORKSPACE_UID" = "0" ]; then
+            echo "⚙️  Изменение владельца /workspace: root → $(whoami)"
+        else
+            echo "⚙️  Исправление владельца /workspace: $WORKSPACE_UID → $CURRENT_UID"
+        fi
+        sudo chown -R "${CURRENT_UID}:${CURRENT_GID}" "$WORKSPACE_DIR" 2>/dev/null || true
     fi
 fi
 
