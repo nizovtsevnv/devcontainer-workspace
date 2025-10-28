@@ -234,12 +234,17 @@ devenv-version-internal:
 devenv-update-internal:
 	@$(call log-section,Обновление из upstream)
 
-	@# Проверить наличие remote 'template'
-	@if ! git remote get-url template >/dev/null 2>&1; then \
-		$(call log-error,Remote 'template' не найден); \
-		$(call log-info,Добавьте его вручную: git remote add template <URL>); \
-		exit 1; \
+	@# Определить статус инициализации
+	@if git remote get-url template >/dev/null 2>&1; then \
+		$(MAKE) devenv-update-project; \
+	else \
+		$(MAKE) devenv-update-template; \
 	fi
+
+# Обновление инициализированного проекта (через merge с template)
+.PHONY: devenv-update-project
+devenv-update-project:
+	@$(call log-info,Режим: инициализированный проект)
 
 	@# Проверка: есть uncommitted changes
 	@if ! git diff-index --quiet HEAD -- 2>/dev/null; then \
@@ -340,3 +345,33 @@ devenv-update-internal:
 	\
 	printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \
 	printf "  Новая версия: $$NEW_VERSION\n"
+
+# Обновление неинициализированного шаблона (простой pull)
+.PHONY: devenv-update-template
+devenv-update-template:
+	@$(call log-info,Режим: неинициализированный шаблон)
+
+	@# Проверка: есть uncommitted changes
+	@if ! git diff-index --quiet HEAD -- 2>/dev/null; then \
+		$(call log-error,Есть незакоммиченные изменения!); \
+		$(call log-info,Закоммитьте или stash их перед обновлением); \
+		git status --short; \
+		exit 1; \
+	fi
+
+	@# Определить текущую ветку
+	@CURRENT_BRANCH=$$(git branch --show-current); \
+	$(call log-info,Обновление ветки: $$CURRENT_BRANCH)
+
+	@# Pull изменений
+	@if git pull 2>&1; then \
+		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Изменения получены\n"; \
+	else \
+		$(call log-error,Не удалось выполнить git pull); \
+		exit 1; \
+	fi
+
+	@# Прочитать версию из .template-version
+	@TEMPLATE_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
+	printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \
+	printf "  Версия шаблона: $$TEMPLATE_VERSION\n"
