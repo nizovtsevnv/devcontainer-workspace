@@ -302,7 +302,7 @@ devenv-update-internal:
 	fi; \
 	\
 	$(call log-info,Выполнение merge...); \
-	if git merge --no-commit --no-ff "template/$$TARGET_VERSION" 2>&1; then \
+	if git merge --allow-unrelated-histories --no-commit --no-ff "template/$$TARGET_VERSION" 2>&1; then \
 		printf "  $(COLOR_SUCCESS)✓ Merge выполнен успешно$(COLOR_RESET)\n"; \
 		\
 		if [ "$$TARGET_VERSION" != "main" ]; then \
