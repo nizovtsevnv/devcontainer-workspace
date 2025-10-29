@@ -36,16 +36,11 @@ devenv-test-internal:
 	fi
 	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Артефакты очищены\n\n"
 
-	@# Запуск контейнера
-	@$(MAKE) up >/dev/null 2>&1
-
 	@# Подготовка изолированного тестового окружения - ВСЁ из контейнера
+	@# make exec сам запустит контейнер через ensure-container-running
 	@$(call log-info,Подготовка тестового окружения...)
-	@$(MAKE) exec "mkdir -p $(TEST_DIR)/modules && \
-		cp Makefile $(TEST_DIR)/ && \
-		cp -r makefiles $(TEST_DIR)/ && \
-		cp -r .devcontainer $(TEST_DIR)/ && \
-		echo '=== Test Run: $$(date) ===' > $(TEST_LOG)" >/dev/null 2>&1
+	@$(MAKE) exec "mkdir -p $(TEST_DIR)/modules && cp Makefile $(TEST_DIR)/ && cp -r makefiles $(TEST_DIR)/ && cp -r .devcontainer $(TEST_DIR)/"
+	@$(MAKE) exec "echo '=== Test Run: \$$(date) ===' > $(TEST_DIR)/test-results.log"
 	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Окружение подготовлено\n\n"
 
 	@# Подготовка тестовых модулей
