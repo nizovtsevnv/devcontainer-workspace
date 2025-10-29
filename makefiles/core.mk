@@ -20,7 +20,7 @@ else
 			$(CONTAINER_RUNTIME) start $(CONTAINER_NAME) >/dev/null; \
 		fi; \
 	else \
-		$(call log-info,Создание нового контейнера...); \
+		$(call log-info,Создание контейнера: $(CONTAINER_NAME) (v$(CONTAINER_IMAGE_VERSION))...); \
 		if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
 			$(CONTAINER_RUNTIME) run -d \
 				--name $(CONTAINER_NAME) \
@@ -47,7 +47,7 @@ else
 				/bin/bash -c "trap 'exit 0' TERM; while true; do sleep 1; done" >/dev/null; \
 		fi; \
 	fi
-	@$(call log-success,DevContainer запущен: $(CONTAINER_NAME))
+	@$(call log-success,DevContainer запущен)
 	@printf "\n"
 endif
 
