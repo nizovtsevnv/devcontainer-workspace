@@ -216,8 +216,9 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --de
   && rustup component add rustfmt clippy rust-analyzer
 
 # Установка cargo утилит с кэшированием для ускорения сборки
-RUN --mount=type=cache,target=/home/developer/.cargo/registry,uid=1000,gid=1000 \
-    --mount=type=cache,target=/home/developer/.cargo/git,uid=1000,gid=1000 \
+# Кэш монтируется без uid/gid т.к. команда выполняется от текущего пользователя (${USERNAME})
+RUN --mount=type=cache,target=/home/developer/.cargo/registry \
+    --mount=type=cache,target=/home/developer/.cargo/git \
     . $HOME/.cargo/env \
     && cargo install cargo-watch cargo-edit cargo-outdated
 
