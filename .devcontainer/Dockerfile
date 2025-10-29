@@ -60,7 +60,8 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 # Gum - интерактивные CLI компоненты
 # ===================================
 RUN curl -fsSL https://github.com/charmbracelet/gum/releases/download/v0.14.5/gum_0.14.5_Linux_x86_64.tar.gz | \
-  tar -xz -C /usr/local/bin gum && \
+  tar -xz -C /tmp && \
+  mv /tmp/gum /usr/local/bin/gum && \
   chmod +x /usr/local/bin/gum
 
 # ===================================
