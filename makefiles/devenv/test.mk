@@ -123,25 +123,25 @@ test-commands-internal:
 test-permissions-internal:
 	@printf "\n$(COLOR_INFO)═══ Тестирование прав доступа ═══$(COLOR_RESET)\n"
 
-	@# Создать файл в контейнере
+	@# Создать файл в контейнере (в modules/ где developer имеет права)
 	@$(call run-test,Создание файла в контейнере, \
-		$(MAKE) exec 'touch $(TEST_DIR)/perm-test.txt' >/dev/null 2>&1)
+		$(MAKE) exec 'touch $(TEST_DIR)/modules/perm-test.txt' >/dev/null 2>&1)
 
 	@# Проверить права файла
 	@EXPECTED_UID=$(HOST_UID); \
 	EXPECTED_GID=$(HOST_GID); \
-	ACTUAL_UID=$$(stat -c '%u' $(TEST_DIR)/perm-test.txt 2>/dev/null); \
-	ACTUAL_GID=$$(stat -c '%g' $(TEST_DIR)/perm-test.txt 2>/dev/null); \
+	ACTUAL_UID=$$(stat -c '%u' $(TEST_DIR)/modules/perm-test.txt 2>/dev/null); \
+	ACTUAL_GID=$$(stat -c '%g' $(TEST_DIR)/modules/perm-test.txt 2>/dev/null); \
 	$(call run-test,Файл имеет правильный UID:GID ($$EXPECTED_UID:$$EXPECTED_GID), \
 		[ "$$ACTUAL_UID" = "$$EXPECTED_UID" ] && [ "$$ACTUAL_GID" = "$$EXPECTED_GID" ])
 
 	@# Проверить возможность записи с хоста
 	@$(call run-test,Запись с хоста работает, \
-		echo "host-write" > $(TEST_DIR)/perm-test.txt)
+		echo "host-write" > $(TEST_DIR)/modules/perm-test.txt)
 
 	@# Проверить возможность чтения из контейнера
 	@$(call run-test,Чтение из контейнера работает, \
-		$(MAKE) exec 'cat $(TEST_DIR)/perm-test.txt' 2>/dev/null | grep -q "host-write")
+		$(MAKE) exec 'cat $(TEST_DIR)/modules/perm-test.txt' 2>/dev/null | grep -q "host-write")
 
 # Тест технологических стеков
 .PHONY: test-stacks-internal
