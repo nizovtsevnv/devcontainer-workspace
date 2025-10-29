@@ -43,6 +43,8 @@ devenv-test-internal:
 	@cp -r makefiles $(TEST_DIR)/
 	@cp -r .devcontainer $(TEST_DIR)/
 	@echo "=== Test Run: $$(date) ===" > $(TEST_LOG)
+	@# Исправить права доступа к тестовой директории внутри контейнера
+	@$(MAKE) exec "sudo chown -R developer:developer $(TEST_DIR)" >/dev/null 2>&1
 	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Окружение подготовлено\n\n"
 
 	@# Подготовка тестовых модулей
