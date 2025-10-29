@@ -181,12 +181,12 @@ module-validate-and-create:
 .PHONY: module-create-nodejs-bun
 module-create-nodejs-bun:
 	@$(call log-info,Создание Bun проекта: $(NAME)...)
-	@$(MAKE) exec "cd $(MODULE_TARGET) && bun init -y $(NAME)" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET) && bun init -y $(NAME)"
 	@# Добавить scripts для тестов
 	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
-		cd $(MODULE_TARGET)/$(NAME) && npm pkg set scripts.test="echo 'nodejs test passed'" && npm pkg set scripts.build="echo 'nodejs build passed'" >/dev/null 2>&1; \
+		cd $(MODULE_TARGET)/$(NAME) && npm pkg set scripts.test="echo 'nodejs test passed'" && npm pkg set scripts.build="echo 'nodejs build passed'"; \
 	else \
-		$(CONTAINER_RUNTIME) exec $(CONTAINER_NAME) sh -c 'cd $(MODULE_TARGET)/$(NAME) && npm pkg set scripts.test="echo '"'"'nodejs test passed'"'"'" && npm pkg set scripts.build="echo '"'"'nodejs build passed'"'"'"' >/dev/null 2>&1; \
+		$(CONTAINER_RUNTIME) exec $(CONTAINER_NAME) sh -c 'cd $(MODULE_TARGET)/$(NAME) && npm pkg set scripts.test="echo '"'"'nodejs test passed'"'"'" && npm pkg set scripts.build="echo '"'"'nodejs build passed'"'"'"'; \
 	fi
 	@$(call log-success,Bun проект создан: $(MODULE_TARGET)/$(NAME))
 
