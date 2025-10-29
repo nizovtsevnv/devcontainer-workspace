@@ -59,10 +59,13 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 # ===================================
 # Gum - интерактивные CLI компоненты
 # ===================================
-RUN curl -fsSL https://github.com/charmbracelet/gum/releases/download/v0.14.5/gum_0.14.5_Linux_x86_64.tar.gz | \
-  tar -xz -C /tmp && \
-  mv /tmp/gum /usr/local/bin/gum && \
-  chmod +x /usr/local/bin/gum
+RUN mkdir -p /etc/apt/keyrings \
+  && curl -fsSL https://repo.charm.sh/apt/gpg.key | gpg --dearmor -o /etc/apt/keyrings/charm.gpg \
+  && echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" > /etc/apt/sources.list.d/charm.list \
+  && apt-get update \
+  && apt-get install -y gum \
+  && apt-get clean -y \
+  && rm -rf /var/lib/apt/lists/*
 
 # ===================================
 # Node.js + npm инструменты
