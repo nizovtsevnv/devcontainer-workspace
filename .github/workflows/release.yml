@@ -10,19 +10,8 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # Шаг 1: Тестирование
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run tests
-        run: make devenv test
-
-  # Шаг 2: Сборка и публикация Docker образа
+  # Шаг 1: Сборка Docker образа
   build-image:
-    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -64,9 +53,20 @@ jobs:
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
+  # Шаг 2: Тестирование
+  test:
+    needs: build-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run tests
+        run: make devenv test
+
   # Шаг 3: Создание релиза
   create-release:
-    needs: build-image
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
