@@ -21,9 +21,10 @@ include makefiles/config.mk
 include makefiles/functions.mk
 include makefiles/detect.mk
 include makefiles/core.mk
-include makefiles/modules.mk
-include makefiles/devenv.mk
-include makefiles/devenv-test.mk
+include makefiles/modules/commands.mk
+include makefiles/modules/create.mk
+include makefiles/devenv/main.mk
+include makefiles/devenv/test.mk
 include makefiles/help.mk
 
 # Универсальное правило для подавления ошибок о несуществующих targets
