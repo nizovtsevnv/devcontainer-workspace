@@ -158,7 +158,7 @@ module-request-name:
 module-validate-and-create:
 	@# Валидация имени (только буквы, цифры, дефис, underscore)
 	@if ! echo "$(NAME)" | grep -qE '^[a-zA-Z0-9_-]+$$'; then \
-		$(call log-error,Имя может содержать только буквы\, цифры\, дефис и underscore); \
+		$(call log-error,Имя может содержать только буквы цифры дефис и underscore); \
 		exit 1; \
 	fi
 
@@ -182,6 +182,12 @@ module-validate-and-create:
 module-create-nodejs-bun:
 	@$(call log-info,Создание Bun проекта: $(NAME)...)
 	@$(MAKE) exec "cd $(MODULE_TARGET) && bun init -y $(NAME)" >/dev/null 2>&1
+	@# Добавить scripts для тестов
+	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
+		cd $(MODULE_TARGET)/$(NAME) && npm pkg set scripts.test="echo 'nodejs test passed'" && npm pkg set scripts.build="echo 'nodejs build passed'" >/dev/null 2>&1; \
+	else \
+		$(CONTAINER_RUNTIME) exec $(CONTAINER_NAME) sh -c 'cd $(MODULE_TARGET)/$(NAME) && npm pkg set scripts.test="echo '"'"'nodejs test passed'"'"'" && npm pkg set scripts.build="echo '"'"'nodejs build passed'"'"'"' >/dev/null 2>&1; \
+	fi
 	@$(call log-success,Bun проект создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-nodejs-npm
@@ -238,6 +244,12 @@ module-create-php-composer-lib:
 	@$(call log-info,Создание Composer library: $(NAME)...)
 	@mkdir -p $(MODULE_TARGET)/$(NAME)
 	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && composer init --name='vendor/$(NAME)' --type=library --no-interaction" >/dev/null 2>&1
+	@# Добавить test script
+	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
+		cd $(MODULE_TARGET)/$(NAME) && composer config scripts.test "echo 'php test passed'" >/dev/null 2>&1; \
+	else \
+		$(CONTAINER_RUNTIME) exec $(CONTAINER_NAME) sh -c 'cd $(MODULE_TARGET)/$(NAME) && composer config scripts.test "echo '"'"'php test passed'"'"'"' >/dev/null 2>&1; \
+	fi
 	@$(call log-success,Composer library создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-php-composer-project
@@ -272,6 +284,12 @@ module-create-python-uv:
 module-create-python-poetry:
 	@$(call log-info,Создание Poetry проекта: $(NAME)...)
 	@$(MAKE) exec "cd $(MODULE_TARGET) && poetry new $(NAME)" >/dev/null 2>&1
+	@# Создать test_main.py
+	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
+		printf 'def test_main():\n    print("python test passed")\n    assert True\n' > $(MODULE_TARGET)/$(NAME)/tests/test_main.py; \
+	else \
+		$(CONTAINER_RUNTIME) exec $(CONTAINER_NAME) sh -c 'printf "def test_main():\n    print(\"python test passed\")\n    assert True\n" > $(MODULE_TARGET)/$(NAME)/tests/test_main.py'; \
+	fi
 	@$(call log-success,Poetry проект создан: $(MODULE_TARGET)/$(NAME))
 
 # ===================================

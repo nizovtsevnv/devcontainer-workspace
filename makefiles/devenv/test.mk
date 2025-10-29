@@ -69,36 +69,21 @@ devenv-test-internal:
 setup-test-modules:
 	@$(call log-info,Создание тестовых модулей...)
 
-	@# Node.js модуль
-	@mkdir -p $(TEST_DIR)/modules/test-nodejs
-	@echo '{"name":"test-nodejs","version":"1.0.0","scripts":{"test":"echo \"nodejs test passed\"","build":"echo \"nodejs build passed\""}}' \
-		> $(TEST_DIR)/modules/test-nodejs/package.json
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-nodejs\n"
+	@# Node.js модуль (Bun)
+	@$(MAKE) module MODULE_STACK=nodejs MODULE_TYPE=bun MODULE_NAME=test-nodejs MODULE_TARGET=$(TEST_DIR)/modules >/dev/null 2>&1
+	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-nodejs (bun)\n"
 
-	@# PHP модуль
-	@mkdir -p $(TEST_DIR)/modules/test-php
-	@echo '{"name":"test/php","scripts":{"test":"echo \"php test passed\"","build":"echo \"php build passed\""}}' \
-		> $(TEST_DIR)/modules/test-php/composer.json
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-php\n"
+	@# PHP модуль (Composer)
+	@$(MAKE) module MODULE_STACK=php MODULE_TYPE=composer-lib MODULE_NAME=test-php MODULE_TARGET=$(TEST_DIR)/modules >/dev/null 2>&1
+	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-php (composer)\n"
 
-	@# Python модуль
-	@mkdir -p $(TEST_DIR)/modules/test-python
-	@echo '[project]' > $(TEST_DIR)/modules/test-python/pyproject.toml
-	@echo 'name = "test-python"' >> $(TEST_DIR)/modules/test-python/pyproject.toml
-	@echo 'version = "1.0.0"' >> $(TEST_DIR)/modules/test-python/pyproject.toml
-	@echo 'def test_pass(): assert True' > $(TEST_DIR)/modules/test-python/test_main.py
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-python\n"
+	@# Python модуль (Poetry)
+	@$(MAKE) module MODULE_STACK=python MODULE_TYPE=poetry MODULE_NAME=test-python MODULE_TARGET=$(TEST_DIR)/modules >/dev/null 2>&1
+	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-python (poetry)\n"
 
-	@# Rust модуль
-	@mkdir -p $(TEST_DIR)/modules/test-rust/src
-	@echo '[package]' > $(TEST_DIR)/modules/test-rust/Cargo.toml
-	@echo 'name = "test-rust"' >> $(TEST_DIR)/modules/test-rust/Cargo.toml
-	@echo 'version = "1.0.0"' >> $(TEST_DIR)/modules/test-rust/Cargo.toml
-	@echo 'edition = "2021"' >> $(TEST_DIR)/modules/test-rust/Cargo.toml
-	@echo 'fn main() { println!("Hello Rust"); }' > $(TEST_DIR)/modules/test-rust/src/main.rs
-	@echo '#[cfg(test)]' >> $(TEST_DIR)/modules/test-rust/src/main.rs
-	@echo 'mod tests { #[test] fn test_pass() { assert!(true); } }' >> $(TEST_DIR)/modules/test-rust/src/main.rs
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-rust\n"
+	@# Rust модуль (Binary)
+	@$(MAKE) module MODULE_STACK=rust MODULE_TYPE=bin MODULE_NAME=test-rust MODULE_TARGET=$(TEST_DIR)/modules >/dev/null 2>&1
+	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-rust (cargo)\n"
 	@printf "\n"
 
 # Тест базовых команд
@@ -179,7 +164,7 @@ test-stack-php-internal:
 .PHONY: test-stack-python-internal
 test-stack-python-internal:
 	@$(call run-test,test-python / pytest, \
-		$(MAKE) exec 'cd $(TEST_DIR)/modules/test-python && pytest -q test_main.py' >/dev/null 2>&1)
+		$(MAKE) exec 'cd $(TEST_DIR)/modules/test-python && pytest -q tests/test_main.py' >/dev/null 2>&1)
 
 .PHONY: test-stack-rust-internal
 test-stack-rust-internal:
