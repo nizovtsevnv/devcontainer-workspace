@@ -158,12 +158,12 @@ RUN python3 -m pip install --break-system-packages \
 # Совместимость с Docker и Podman на всех платформах
 # ===================================
 ARG USERNAME=developer
-ARG USER_UID=1000
-ARG USER_GID=1000
+ARG CONTAINER_UID=1000
+ARG CONTAINER_GID=1000
 
 # Создаём группу и пользователя developer
-RUN groupadd --gid ${USER_GID} ${USERNAME} && \
-  useradd -m -u ${USER_UID} -g ${USER_GID} -s /bin/bash ${USERNAME}
+RUN groupadd --gid ${CONTAINER_GID} ${USERNAME} && \
+  useradd -m -u ${CONTAINER_UID} -g ${CONTAINER_GID} -s /bin/bash ${USERNAME}
 
 # Создаём группы docker и podman (если не существуют) и добавляем пользователя
 RUN (getent group docker || groupadd docker) && \
@@ -180,12 +180,12 @@ RUN apt-get update \
 
 # Настройка npm для пользователя
 RUN mkdir -p /home/${USERNAME}/.npm-global \
-  && chown -R ${USERNAME}:${USER_GID} /home/${USERNAME}/.npm-global
+  && chown -R ${USERNAME}:${CONTAINER_GID} /home/${USERNAME}/.npm-global
 
 # Создаём /workspace и устанавливаем права
 # Владелец будет автоматически исправлен entrypoint.sh при запуске
 RUN mkdir -p /workspace \
-  && chown -R ${USER_UID}:${USER_GID} /workspace \
+  && chown -R ${CONTAINER_UID}:${CONTAINER_GID} /workspace \
   && chmod -R 775 /workspace
 
 # Настройка git safe.directory (решает проблему "dubious ownership")

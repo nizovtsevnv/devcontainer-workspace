@@ -206,7 +206,7 @@ Docker Desktop может работать медленно на macOS/Windows �
 id -u
 
 # Если не совпадает с 1000, обновите Dockerfile:
-ARG USER_UID=<ваш UID>
+ARG CONTAINER_UID=<ваш UID>
 ```
 
 ### Docker socket недоступен
