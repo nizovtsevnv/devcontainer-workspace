@@ -39,8 +39,6 @@ devenv-test-internal:
 	@# Подготовка изолированного тестового окружения
 	@$(call log-info,Подготовка тестового окружения...)
 	@mkdir -p $(TEST_DIR)/modules
-	@# Установить права 777 для совместимости с любым UID/GID в контейнере
-	@chmod -R 777 $(TEST_DIR)
 	@cp Makefile $(TEST_DIR)/
 	@cp -r makefiles $(TEST_DIR)/
 	@cp -r .devcontainer $(TEST_DIR)/

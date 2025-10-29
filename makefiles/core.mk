@@ -39,7 +39,6 @@ else
 				--network=host \
 				-v "$(WORKSPACE_ROOT):$(CONTAINER_WORKDIR)" \
 				-w $(CONTAINER_WORKDIR) \
-				--user "$(HOST_UID):$(HOST_GID)" \
 				-e INSIDE_DEVCONTAINER=1 \
 				-e USER=developer \
 				-e HOME=/home/developer \
