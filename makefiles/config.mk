@@ -33,9 +33,12 @@ TEMPLATE_VERSION := $(shell \
 	if [ -f .template-version ]; then \
 		cat .template-version 2>/dev/null | sed 's/^v//' || echo "latest"; \
 	else \
-		git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//' || \
-		git describe --tags 2>/dev/null | sed 's/^v//' || \
-		echo "latest"; \
+		VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null || git describe --tags 2>/dev/null || echo ""); \
+		if [ -n "$$VERSION" ]; then \
+			echo "$$VERSION" | sed 's/^v//' | sed 's/-[0-9]*-g.*//'; \
+		else \
+			echo "latest"; \
+		fi; \
 	fi)
 CONTAINER_IMAGE_VERSION := $(TEMPLATE_VERSION)
 CONTAINER_IMAGE := ghcr.io/nizovtsevnv/devcontainer-workspace:$(CONTAINER_IMAGE_VERSION)
