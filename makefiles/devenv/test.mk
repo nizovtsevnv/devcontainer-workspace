@@ -39,6 +39,11 @@ devenv-test-internal:
 	@# Подготовка изолированного тестового окружения - ВСЁ из контейнера
 	@# make exec сам запустит контейнер через ensure-container-running
 	@$(call log-info,Подготовка тестового окружения...)
+	@# Диагностика: вывод информации о UID/GID
+	@printf "  $(COLOR_INFO)→ HOST: UID=$(HOST_UID) GID=$(HOST_GID)$(COLOR_RESET)\n"
+	@$(MAKE) exec "printf '  $(COLOR_INFO)→ CONTAINER: UID=\$$(id -u) GID=\$$(id -g) USER=\$$(whoami)$(COLOR_RESET)\n'"
+	@$(MAKE) exec "printf '  $(COLOR_INFO)→ CWD: \$$(pwd) (owner: \$$(stat -c '%u:%g' .))$(COLOR_RESET)\n'"
+	@$(MAKE) exec "printf '  $(COLOR_INFO)→ CWD permissions: \$$(stat -c '%a %A' .)$(COLOR_RESET)\n'"
 	@$(MAKE) exec "mkdir -p $(TEST_DIR)/modules && cp Makefile $(TEST_DIR)/ && cp -r makefiles $(TEST_DIR)/ && cp -r .devcontainer $(TEST_DIR)/"
 	@$(MAKE) exec "echo '=== Test Run: \$$(date) ===' > $(TEST_DIR)/test-results.log"
 	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Окружение подготовлено\n\n"
