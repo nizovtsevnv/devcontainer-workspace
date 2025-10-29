@@ -10,22 +10,10 @@
 
 # Функция вывода справки по devenv командам
 define devenv-help
-	STATUS="не инициализирован"; \
-	if git remote get-url template >/dev/null 2>&1; then \
-		ORIGIN_URL=$$(git remote get-url origin 2>/dev/null || echo ""); \
-		TEMPLATE_URL=$$(git remote get-url template 2>/dev/null || echo ""); \
-		if [ -z "$$ORIGIN_URL" ]; then \
-			STATUS="инициализирован"; \
-		else \
-			ORIGIN_NORM=$$(echo "$$ORIGIN_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
-			TEMPLATE_NORM=$$(echo "$$TEMPLATE_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
-			if [ "$$ORIGIN_NORM" != "$$TEMPLATE_NORM" ]; then \
-				STATUS="инициализирован"; \
-			fi; \
-		fi; \
-	fi; \
+	$(call check-project-init-status); \
 	if [ "$$STATUS" = "не инициализирован" ]; then \
 		printf "  $(COLOR_SUCCESS)make devenv init      $(COLOR_RESET)Инициализация проекта из шаблона\n"; \
+		printf "  $(COLOR_SUCCESS)make devenv test      $(COLOR_RESET)Запустить автотесты (только для разработки)\n"; \
 	fi; \
 	printf "  $(COLOR_SUCCESS)make devenv update    $(COLOR_RESET)Обновить версию шаблона\n"; \
 	printf "  $(COLOR_SUCCESS)make devenv version   $(COLOR_RESET)Текущая и актуальная версия шаблона\n"
@@ -38,7 +26,7 @@ endef
 # Получить подкоманду (первый аргумент после devenv)
 DEVENV_CMD := $(word 2,$(MAKECMDGOALS))
 
-## devenv: Команды управления шаблоном (init, version, update)
+## devenv: Команды управления шаблоном (init, test, version, update)
 devenv:
 	@if [ -z "$(DEVENV_CMD)" ]; then \
 		$(call log-section,Команды управления шаблоном проекта); \
@@ -46,6 +34,9 @@ devenv:
 		exit 0; \
 	elif [ "$(DEVENV_CMD)" = "init" ]; then \
 		$(MAKE) devenv-init-internal; \
+		exit 0; \
+	elif [ "$(DEVENV_CMD)" = "test" ]; then \
+		$(MAKE) devenv-test-internal; \
 		exit 0; \
 	elif [ "$(DEVENV_CMD)" = "version" ]; then \
 		$(MAKE) devenv-version-internal; \
@@ -55,7 +46,7 @@ devenv:
 		exit 0; \
 	else \
 		$(call log-error,Неизвестная подкоманда: $(DEVENV_CMD)); \
-		$(call log-info,Доступны: init, version, update); \
+		$(call log-info,Доступны: init, test, version, update); \
 		exit 1; \
 	fi
 
@@ -68,9 +59,9 @@ version:
 		$(MAKE) -f $(firstword $(MAKEFILE_LIST)) core-version; \
 	fi
 
-# Stub targets для подавления ошибок Make при вызове `make devenv init/update`
-.PHONY: init update
-init update:
+# Stub targets для подавления ошибок Make при вызове `make devenv init/test/update`
+.PHONY: init test update
+init test update:
 	@:
 
 # ===================================
@@ -114,23 +105,6 @@ devenv-init-internal:
 	echo "$$CURRENT_VERSION" > .template-version; \
 	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Версия шаблона: $$CURRENT_VERSION\n"
 
-	@# Создание README проекта (до удаления файлов шаблона!)
-	@printf "\n$(COLOR_INFO)Создать README.md проекта? [Y/n]:$(COLOR_RESET) "; \
-	read CREATE_README; \
-	if [ "$$CREATE_README" != "n" ] && [ "$$CREATE_README" != "N" ]; then \
-		if [ -f "README.project.md" ]; then \
-			cp README.project.md README.md; \
-			printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) README.md создан из шаблона\n"; \
-		else \
-			echo "# My Project" > README.md; \
-			echo "" >> README.md; \
-			echo "Проект создан из [DevContainer Workspace](https://github.com/nizovtsevnv/devcontainer-workspace)" >> README.md; \
-			printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) README.md создан\n"; \
-		fi; \
-	else \
-		printf "  $(COLOR_INFO)ℹ$(COLOR_RESET) README.md не создан (можно создать позже)\n"; \
-	fi
-
 	@# Удаление файлов шаблона
 	@$(call log-info,Удаление файлов шаблона...)
 	@for file in .github/ README.project.md; do \
@@ -173,19 +147,7 @@ devenv-init-internal:
 	fi
 
 	@# Создание README проекта
-	@printf "\n$(COLOR_INFO)Создать README.md проекта? [Y/n]:$(COLOR_RESET) "; \
-	read CREATE_README; \
-	if [ "$$CREATE_README" != "n" ] && [ "$$CREATE_README" != "N" ]; then \
-		if [ -f "README.project.md" ]; then \
-			cp README.project.md README.md; \
-			printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) README.md создан из шаблона\n"; \
-		else \
-			echo "# My Project" > README.md; \
-			echo "" >> README.md; \
-			echo "Проект создан из [DevContainer Workspace](https://github.com/nizovtsevnv/devcontainer-workspace)" >> README.md; \
-			printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) README.md создан\n"; \
-		fi; \
-	fi
+	@$(call create-project-readme)
 
 	@# Обновление .gitignore для проекта
 	@$(call log-info,Обновление .gitignore...)
@@ -221,22 +183,11 @@ devenv-version-internal:
 	@$(call log-section,Текущий статус шаблона разработки)
 
 	@# Определить текущую версию и статус
-	@STATUS="не инициализирован"; \
-	REMOTE="origin"; \
-	if git remote get-url template >/dev/null 2>&1; then \
-		ORIGIN_URL=$$(git remote get-url origin 2>/dev/null || echo ""); \
-		TEMPLATE_URL=$$(git remote get-url template 2>/dev/null || echo ""); \
-		if [ -z "$$ORIGIN_URL" ]; then \
-			STATUS="инициализирован"; \
-			REMOTE="template"; \
-		else \
-			ORIGIN_NORM=$$(echo "$$ORIGIN_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
-			TEMPLATE_NORM=$$(echo "$$TEMPLATE_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
-			if [ "$$ORIGIN_NORM" != "$$TEMPLATE_NORM" ]; then \
-				STATUS="инициализирован"; \
-				REMOTE="template"; \
-			fi; \
-		fi; \
+	@$(call check-project-init-status); \
+	if [ "$$STATUS" = "инициализирован" ]; then \
+		REMOTE="template"; \
+	else \
+		REMOTE="origin"; \
 	fi; \
 	\
 	if [ "$$STATUS" = "инициализирован" ]; then \
@@ -284,22 +235,8 @@ devenv-version-internal:
 devenv-update-internal:
 	@$(call log-section,Обновление версии шаблона)
 
-	@# Определить статус инициализации (аналогично devenv-version)
-	@STATUS="не инициализирован"; \
-	if git remote get-url template >/dev/null 2>&1; then \
-		ORIGIN_URL=$$(git remote get-url origin 2>/dev/null || echo ""); \
-		TEMPLATE_URL=$$(git remote get-url template 2>/dev/null || echo ""); \
-		if [ -z "$$ORIGIN_URL" ]; then \
-			STATUS="инициализирован"; \
-		else \
-			ORIGIN_NORM=$$(echo "$$ORIGIN_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
-			TEMPLATE_NORM=$$(echo "$$TEMPLATE_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
-			if [ "$$ORIGIN_NORM" != "$$TEMPLATE_NORM" ]; then \
-				STATUS="инициализирован"; \
-			fi; \
-		fi; \
-	fi; \
-	\
+	@# Определить статус инициализации
+	@$(call check-project-init-status); \
 	if [ "$$STATUS" = "инициализирован" ]; then \
 		$(MAKE) devenv-update-project; \
 	else \
@@ -310,18 +247,10 @@ devenv-update-internal:
 .PHONY: devenv-update-project
 devenv-update-project:
 	@# Проверка: есть uncommitted changes
-	@if ! git diff-index --quiet HEAD -- 2>/dev/null; then \
-		$(call log-error,Есть незакоммиченные изменения!); \
-		$(call log-info,Закоммитьте или stash их перед обновлением); \
-		git status --short; \
-		exit 1; \
-	fi
+	@$(call require-clean-working-tree)
 
 	@# Остановить контейнер если запущен (чтобы не работал на старой версии)
-	@if $(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) ps 2>/dev/null | grep -q "Up"; then \
-		$(call log-info,Остановка контейнера перед обновлением...); \
-		$(MAKE) down; \
-	fi
+	@$(call stop-container-if-running)
 
 	@# Fetch обновлений
 	@git fetch template --tags --force >/dev/null 2>&1 || true
@@ -422,22 +351,11 @@ devenv-update-project:
 	git add .template-version; \
 	git commit -m "chore: update devenv template to $$NEW_VERSION" >/dev/null 2>&1 || true; \
 	\
-	if [ -f .devcontainer/docker-compose.yml ]; then \
-		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновление Docker образа и пересоздание контейнера...\n"; \
-		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) pull 2>&1 | grep -v "Trying to pull\|Writing manifest" || true; \
-		if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
-			POD_NAME=$$(podman pod ls --format "{{.Name}}" 2>/dev/null | grep devcontainer | head -1); \
-			if [ -n "$$POD_NAME" ]; then \
-				printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Удаление старого pod: $$POD_NAME...\n"; \
-				podman pod rm -f $$POD_NAME 2>/dev/null || true; \
-			fi; \
-		fi; \
-		$(call container-compose,up -d) >/dev/null 2>&1 || true; \
-		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"; \
-	fi; \
-	\
 	printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \
 	printf "  Новая версия: $$NEW_VERSION\n"
+
+	@# Обновить Docker образ и пересоздать контейнер
+	@$(call update-container-image)
 
 # Обновление неинициализированного шаблона (простой pull)
 .PHONY: devenv-update-template
@@ -445,18 +363,10 @@ devenv-update-template:
 	@$(call log-info,Режим: неинициализированный шаблон)
 
 	@# Проверка: есть uncommitted changes
-	@if ! git diff-index --quiet HEAD -- 2>/dev/null; then \
-		$(call log-error,Есть незакоммиченные изменения!); \
-		$(call log-info,Закоммитьте или stash их перед обновлением); \
-		git status --short; \
-		exit 1; \
-	fi
+	@$(call require-clean-working-tree)
 
 	@# Остановить контейнер если запущен (чтобы не работал на старой версии)
-	@if $(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) ps 2>/dev/null | grep -q "Up"; then \
-		$(call log-info,Остановка контейнера перед обновлением...); \
-		$(MAKE) down; \
-	fi
+	@$(call stop-container-if-running)
 
 	@# Определить текущую ветку
 	@CURRENT_BRANCH=$$(git branch --show-current); \
@@ -470,22 +380,10 @@ devenv-update-template:
 		exit 1; \
 	fi
 
-	@# Обновить Docker образ и пересоздать контейнер
-	@if [ -f .devcontainer/docker-compose.yml ]; then \
-		printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновление Docker образа и пересоздание контейнера...\n"; \
-		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) pull 2>&1 | grep -v "Trying to pull\|Writing manifest" || true; \
-		if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
-			POD_NAME=$$(podman pod ls --format "{{.Name}}" 2>/dev/null | grep devcontainer | head -1); \
-			if [ -n "$$POD_NAME" ]; then \
-				printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Удаление старого pod: $$POD_NAME...\n"; \
-				podman pod rm -f $$POD_NAME 2>/dev/null || true; \
-			fi; \
-		fi; \
-		$(call container-compose,up -d) >/dev/null 2>&1 || true; \
-		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"; \
-	fi
-
 	@# Определить версию шаблона через git
 	@TEMPLATE_VERSION=$$(git describe --tags 2>/dev/null || echo "unknown"); \
 	printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \
 	printf "  Версия шаблона: $$TEMPLATE_VERSION\n"
+
+	@# Обновить Docker образ и пересоздать контейнер
+	@$(call update-container-image)

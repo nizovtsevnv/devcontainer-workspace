@@ -68,7 +68,7 @@ endef
 define ensure-container-running
 	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
 		: ; \
-	elif $(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) ps 2>/dev/null | grep -q "Up"; then \
+	elif $(CONTAINER_RUNTIME) ps --format "{{.Names}}" 2>/dev/null | grep -q "^devcontainer-workspace-dev$$"; then \
 		: ; \
 	else \
 		$(MAKE) up; \
@@ -85,11 +85,71 @@ define print-commands-table
 		awk 'BEGIN {FS = ": "}; {printf "  $(COLOR_SUCCESS)make %-16s$(COLOR_RESET) %s\n", $$1, $$2}'
 endef
 
-# Обёртка для container compose команд
-# Для Podman явно передаём PODMAN_USERNS для правильного маппинга UID/GID
-# Переменная экспортируется в config.mk, но make export не гарантирует передачу в subprocess
-# Поэтому передаём явно в команде
-# Использование: $(call container-compose,up -d) или $(call container-compose,down)
-define container-compose
-	PODMAN_USERNS="$(PODMAN_USERNS)" $(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) $(1)
+# Определить статус инициализации проекта
+# Возвращает: STATUS=инициализирован или STATUS=не инициализирован
+# Использование: @$(call check-project-init-status)
+define check-project-init-status
+	STATUS="не инициализирован"; \
+	if git remote get-url template >/dev/null 2>&1; then \
+		ORIGIN_URL=$$(git remote get-url origin 2>/dev/null || echo ""); \
+		TEMPLATE_URL=$$(git remote get-url template 2>/dev/null || echo ""); \
+		if [ -z "$$ORIGIN_URL" ]; then \
+			STATUS="инициализирован"; \
+		else \
+			ORIGIN_NORM=$$(echo "$$ORIGIN_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
+			TEMPLATE_NORM=$$(echo "$$TEMPLATE_URL" | sed 's|git@github.com:|https://github.com/|' | sed 's|\.git$$||'); \
+			if [ "$$ORIGIN_NORM" != "$$TEMPLATE_NORM" ]; then \
+				STATUS="инициализирован"; \
+			fi; \
+		fi; \
+	fi
+endef
+
+# Создать README.md проекта (интерактивно)
+# Использование: @$(call create-project-readme)
+define create-project-readme
+	printf "\n$(COLOR_INFO)Создать README.md проекта? [Y/n]:$(COLOR_RESET) "; \
+	read CREATE_README; \
+	if [ "$$CREATE_README" != "n" ] && [ "$$CREATE_README" != "N" ]; then \
+		if [ -f "README.project.md" ]; then \
+			cp README.project.md README.md; \
+			printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) README.md создан из шаблона\n"; \
+		else \
+			echo "# My Project" > README.md; \
+			echo "" >> README.md; \
+			echo "Проект создан из [DevContainer Workspace](https://github.com/nizovtsevnv/devcontainer-workspace)" >> README.md; \
+			printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) README.md создан\n"; \
+		fi; \
+	else \
+		printf "  $(COLOR_INFO)ℹ$(COLOR_RESET) README.md не создан (можно создать позже)\n"; \
+	fi
+endef
+
+# Проверить наличие uncommitted изменений
+# Использование: @$(call require-clean-working-tree)
+define require-clean-working-tree
+	if ! git diff-index --quiet HEAD -- 2>/dev/null; then \
+		$(call log-error,Есть незакоммиченные изменения!); \
+		$(call log-info,Закоммитьте или stash их перед обновлением); \
+		git status --short; \
+		exit 1; \
+	fi
+endef
+
+# Остановить контейнер если запущен
+# Использование: @$(call stop-container-if-running)
+define stop-container-if-running
+	if $(CONTAINER_RUNTIME) ps --format "{{.Names}}" 2>/dev/null | grep -q "^$(CONTAINER_NAME)$$"; then \
+		$(call log-info,Остановка контейнера перед обновлением...); \
+		$(MAKE) down; \
+	fi
+endef
+
+# Обновить Docker образ и пересоздать контейнер
+# Использование: @$(call update-container-image)
+define update-container-image
+	printf "\n$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Обновление Docker образа и пересоздание контейнера...\n"; \
+	$(CONTAINER_RUNTIME) pull $(CONTAINER_IMAGE) 2>&1 | grep -v "Trying to pull\|Writing manifest" || true; \
+	$(MAKE) up >/dev/null 2>&1 || true; \
+	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер обновлен\n"
 endef

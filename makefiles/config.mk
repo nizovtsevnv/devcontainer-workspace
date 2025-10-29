@@ -20,29 +20,18 @@ CONTAINER_RUNTIME := $(shell \
 		echo podman; \
 	fi)
 
-# Отключить предупреждения podman-compose
-export PODMAN_COMPOSE_WARNING_LOGS = 0
-
-# Для Podman: использовать keep-id mode для правильного маппинга UID/GID
-# keep-id сохраняет UID и GID пользователя между хостом и контейнером
-# Решает проблему с subuid namespace (файлы создаются с владельцем 100999 вместо реального UID)
-# Docker игнорирует эту переменную, безопасно экспортировать всегда
-# Примечание: не может быть установлена в docker-compose.yml из-за бага podman-compose (issue #654)
-export PODMAN_USERNS = keep-id:uid=$(HOST_UID),gid=$(HOST_GID)
-
-# Экспортировать UID и GID хоста для docker-compose
+# Экспортировать UID и GID хоста
 # Это обеспечивает корректные права доступа к файлам
 # Используем HOST_UID/HOST_GID, т.к. GID - встроенная переменная bash
 export HOST_UID := $(shell id -u)
 export HOST_GID := $(shell id -g)
 
 # DevContainer настройки
-DEVCONTAINER_SERVICE := devcontainer-workspace-dev
+CONTAINER_NAME := devcontainer-workspace-dev
+CONTAINER_IMAGE := ghcr.io/nizovtsevnv/devcontainer-workspace:latest
+CONTAINER_WORKDIR := /workspace
 DEVCONTAINER_USER := developer
 DEVCONTAINER_WORKDIR := /workspace
-
-# Docker Compose файл для headless режима
-COMPOSE_FILE := .devcontainer/docker-compose.yml
 
 # Пути для субмодулей
 MODULES_DIR := modules

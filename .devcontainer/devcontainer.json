@@ -17,6 +17,11 @@
 
   "workspaceFolder": "/workspace",
   "remoteUser": "developer",
+
+  // ВАЖНО для Podman: VS Code DevContainers могут иметь проблемы с правами файлов
+  // Рекомендуется использовать make up/down вместо "Reopen in Container"
+  // См. документацию в README.md
+
   // Проброс Docker socket для работы с Docker на host машине
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"

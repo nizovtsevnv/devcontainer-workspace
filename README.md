@@ -168,6 +168,18 @@ sudo apt-get install podman podman-compose
 systemctl --user enable --now podman.socket
 ```
 
+### ⚠️ Важно для пользователей Podman
+
+VS Code DevContainers при работе с Podman могут создавать файлы с неправильными правами доступа из-за особенностей user namespace mapping в rootless режиме.
+
+**Рекомендация:** Если вы используете Podman, применяйте команды `make up/down/sh/exec` вместо "Reopen in Container" в VS Code. Эти команды корректно настраивают маппинг UID/GID.
+
+```bash
+# Вместо "Reopen in Container" используйте:
+make up      # Запуск контейнера с правильными настройками
+make sh      # Интерактивная оболочка
+```
+
 Подробнее: [doc/devenv/devcontainer.md](doc/devenv/devcontainer.md)
 
 ---

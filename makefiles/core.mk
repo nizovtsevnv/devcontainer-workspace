@@ -11,21 +11,43 @@ ifeq ($(IS_INSIDE_CONTAINER),0)
 else
 	@$(call log-section,Запуск DevContainer)
 	@$(call check-command,$(CONTAINER_RUNTIME))
-	@if [ ! -f "$(COMPOSE_FILE)" ]; then \
-		$(call log-error,Файл $(COMPOSE_FILE) не найден); \
-		exit 1; \
-	fi
-	@# Для Podman: удалить старый pod если существует
-	@# Старый pod может сохранять неправильные настройки userns
-	@if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
-		POD_NAME=$$(podman pod ls --format "{{.Name}}" 2>/dev/null | grep devcontainer | head -1); \
-		if [ -n "$$POD_NAME" ]; then \
-			$(call log-info,Удаление старого pod: $$POD_NAME); \
-			podman pod rm -f $$POD_NAME 2>/dev/null || true; \
+
+	@# Проверить существует ли контейнер
+	@if $(CONTAINER_RUNTIME) ps -a --format "{{.Names}}" | grep -q "^$(CONTAINER_NAME)$$"; then \
+		$(call log-info,Контейнер уже существует); \
+		if ! $(CONTAINER_RUNTIME) ps --format "{{.Names}}" | grep -q "^$(CONTAINER_NAME)$$"; then \
+			$(call log-info,Запуск существующего контейнера...); \
+			$(CONTAINER_RUNTIME) start $(CONTAINER_NAME) >/dev/null; \
+		fi; \
+	else \
+		$(call log-info,Создание нового контейнера...); \
+		if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
+			$(CONTAINER_RUNTIME) run -d \
+				--name $(CONTAINER_NAME) \
+				--userns=keep-id \
+				--network=host \
+				-v "$(WORKSPACE_ROOT):$(CONTAINER_WORKDIR):Z" \
+				-w $(CONTAINER_WORKDIR) \
+				-e INSIDE_DEVCONTAINER=1 \
+				-e USER=developer \
+				-e HOME=/home/developer \
+				$(CONTAINER_IMAGE) \
+				/bin/bash -c "trap 'exit 0' TERM; while true; do sleep 1; done" >/dev/null; \
+		else \
+			$(CONTAINER_RUNTIME) run -d \
+				--name $(CONTAINER_NAME) \
+				--network=host \
+				-v "$(WORKSPACE_ROOT):$(CONTAINER_WORKDIR)" \
+				-w $(CONTAINER_WORKDIR) \
+				--user "$(HOST_UID):$(HOST_GID)" \
+				-e INSIDE_DEVCONTAINER=1 \
+				-e USER=developer \
+				-e HOME=/home/developer \
+				$(CONTAINER_IMAGE) \
+				/bin/bash -c "trap 'exit 0' TERM; while true; do sleep 1; done" >/dev/null; \
 		fi; \
 	fi
-	@$(call container-compose,up -d)
-	@$(call log-success,DevContainer запущен: $(DEVCONTAINER_SERVICE))
+	@$(call log-success,DevContainer запущен: $(CONTAINER_NAME))
 	@printf "\n"
 endif
 
@@ -35,8 +57,9 @@ ifeq ($(IS_INSIDE_CONTAINER),0)
 	@$(call log-warning,Нельзя остановить контейнер изнутри)
 else
 	@$(call log-section,Остановка DevContainer)
-	@if $(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) ps 2>/dev/null | grep -q "Up"; then \
-		$(call container-compose,down); \
+	@if $(CONTAINER_RUNTIME) ps --format "{{.Names}}" | grep -q "^$(CONTAINER_NAME)$$"; then \
+		$(CONTAINER_RUNTIME) stop $(CONTAINER_NAME) >/dev/null 2>&1; \
+		$(CONTAINER_RUNTIME) rm $(CONTAINER_NAME) >/dev/null 2>&1; \
 		$(call log-success,DevContainer остановлен); \
 	else \
 		$(call log-warning,DevContainer уже остановлен); \
@@ -49,7 +72,7 @@ ifeq ($(IS_INSIDE_CONTAINER),0)
 	@$(call log-warning,Уже внутри контейнера)
 else
 	@$(call ensure-container-running)
-	@$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) exec $(DEVCONTAINER_SERVICE) /bin/bash
+	@$(CONTAINER_RUNTIME) exec -it $(CONTAINER_NAME) /bin/bash
 endif
 
 ## exec: Выполнение команды в DevContainer
@@ -70,7 +93,7 @@ exec:
 	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
 		bash -c "$$COMMAND"; \
 	else \
-		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) exec -T $(DEVCONTAINER_SERVICE) bash -c "$$COMMAND"; \
+		$(CONTAINER_RUNTIME) exec $(CONTAINER_NAME) bash -c "$$COMMAND"; \
 	fi
 
 ## version: Вывод версий инструментов DevContainer и модулей
@@ -90,7 +113,7 @@ core-version:
 		printf "  %-20s $$php_ver\n" "PHP"; \
 		printf "  %-20s $$rust_ver\n" "Rust"; \
 	else \
-		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) exec -T $(DEVCONTAINER_SERVICE) bash -c '\
+		$(CONTAINER_RUNTIME) exec $(CONTAINER_NAME) bash -c '\
 			docker_ver=$$(docker --version 2>/dev/null | awk "{print \$$3}" | sed "s/,\$$//") || docker_ver="не установлен"; \
 			git_ver=$$(git --version 2>/dev/null | awk "{print \$$3}") || git_ver="не установлен"; \
 			node_ver=$$(node --version 2>/dev/null | sed "s/^v//") || node_ver="не установлен"; \

@@ -140,6 +140,44 @@ export DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock
 В настройках включите Docker compatibility mode:
   - Settings → Connections → Enable Docker compatibility socket
 
+### ⚠️ Проблема с правами файлов в VS Code DevContainers + Podman
+
+При использовании VS Code DevContainers с Podman могут возникать проблемы с правами доступа к файлам, создаваемым внутри контейнера.
+
+**Причина:**
+
+Podman в rootless режиме использует user namespace mapping для изоляции:
+- UID/GID хоста (например, 1000:100) маппятся в диапазон внутри контейнера
+- По умолчанию UID 1000 на хосте → UID 0 (root) в контейнере
+- VS Code DevContainers не учитывают эту особенность при создании контейнера
+- Файлы, созданные в контейнере, получают неправильные права на хосте (например, 100999:100999 вместо 1000:100)
+
+**Решение:**
+
+Используйте команды `make up/down/sh/exec` вместо "Reopen in Container" в VS Code. Эти команды корректно настраивают user namespace mapping:
+
+```bash
+# Вместо VS Code "Reopen in Container":
+make up      # Запуск контейнера с --userns=keep-id (Podman) или --user (Docker)
+make sh      # Интерактивная оболочка в контейнере
+make exec    # Выполнение команды в контейнере
+make down    # Остановка контейнера
+
+# Пример работы:
+make up
+make sh
+# внутри контейнера: touch test.txt
+# на хосте файл будет иметь правильные права: 1000:100
+```
+
+**Техническая деталь:**
+
+Makefile автоматически использует правильные флаги для каждого container runtime:
+- **Podman:** `--userns=keep-id` - сохраняет UID/GID между хостом и контейнером
+- **Docker:** `--user $(id -u):$(id -g)` - явно задает UID/GID пользователя
+
+Файл `docker-compose.yml` оставлен только для совместимости с VS Code, но команды `make` используют нативные docker/podman команды напрямую
+
 ## Устранение проблем
 
 ### Контейнер не собирается

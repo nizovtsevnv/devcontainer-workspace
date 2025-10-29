@@ -137,6 +137,9 @@ coverage/
 .nyc_output/
 htmlcov/
 
+# DevContainer template test artifacts
+.test-workspace/
+
 # ===================================
 # Modules (template development)
 # ===================================

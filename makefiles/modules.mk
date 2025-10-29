@@ -119,15 +119,13 @@ ifneq ($(filter $(FIRST_GOAL),$(MODULE_NAMES)),)
 		if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
 			cd "$(MODULE_PATH)" && $(PACKAGE_MANAGER) --help; \
 		else \
-			$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) exec -w $(DEVCONTAINER_WORKDIR)/$(MODULE_PATH) -T $(DEVCONTAINER_SERVICE) \
-				$(PACKAGE_MANAGER) --help; \
+			$(CONTAINER_RUNTIME) exec $(CONTAINER_NAME) bash -c "cd $(CONTAINER_WORKDIR)/modules/$(MODULE_NAME) && $(PACKAGE_MANAGER) --help"; \
 		fi; \
 	else \
 		if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
 			cd "$(MODULE_PATH)" && $(PACKAGE_MANAGER) $(PM_COMMAND); \
 		else \
-			$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) exec -w $(DEVCONTAINER_WORKDIR)/$(MODULE_PATH) -T $(DEVCONTAINER_SERVICE) \
-				$(PACKAGE_MANAGER) $(PM_COMMAND); \
+			$(CONTAINER_RUNTIME) exec $(CONTAINER_NAME) bash -c "cd $(CONTAINER_WORKDIR)/modules/$(MODULE_NAME) && $(PACKAGE_MANAGER) $(PM_COMMAND)"; \
 		fi; \
 	fi
 
@@ -214,8 +212,7 @@ ifneq ($(filter $(FIRST_GOAL),$(MODULE_NAMES)),)
 	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
 		cd "$(MODULE_PATH)" && $(PM_AUTO) $(MAPPED_CMD) $(REST_GOALS); \
 	else \
-		$(CONTAINER_RUNTIME) compose -f $(COMPOSE_FILE) exec -w $(DEVCONTAINER_WORKDIR)/$(MODULE_PATH) -T $(DEVCONTAINER_SERVICE) \
-			$(PM_AUTO) $(MAPPED_CMD) $(REST_GOALS); \
+		$(CONTAINER_RUNTIME) exec $(CONTAINER_NAME) bash -c "cd $(CONTAINER_WORKDIR)/modules/$(MODULE_NAME) && $(PM_AUTO) $(MAPPED_CMD) $(REST_GOALS)"; \
 	fi
 
           .PHONY: $(MODULE_CMD) $(REST_GOALS)

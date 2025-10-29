@@ -45,7 +45,7 @@ make help
 ### Управление средой
 
 #### `make up`
-Запуск DevContainer через docker compose в headless режиме.
+Запуск DevContainer с использованием нативных docker/podman команд.
 
 ```bash
 make up
