@@ -31,19 +31,14 @@ devenv:
 	@if [ -z "$(DEVENV_CMD)" ]; then \
 		$(call log-section,Команды управления шаблоном проекта); \
 		$(call devenv-help); \
-		exit 0; \
 	elif [ "$(DEVENV_CMD)" = "init" ]; then \
 		$(MAKE) devenv-init-internal; \
-		exit 0; \
 	elif [ "$(DEVENV_CMD)" = "test" ]; then \
 		$(MAKE) devenv-test-internal; \
-		exit 0; \
 	elif [ "$(DEVENV_CMD)" = "version" ]; then \
 		$(MAKE) devenv-version-internal; \
-		exit 0; \
 	elif [ "$(DEVENV_CMD)" = "update" ]; then \
 		$(MAKE) devenv-update-internal; \
-		exit 0; \
 	else \
 		$(call log-error,Неизвестная подкоманда: $(DEVENV_CMD)); \
 		$(call log-info,Доступны: init, test, version, update); \
