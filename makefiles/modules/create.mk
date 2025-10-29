@@ -194,45 +194,45 @@ module-create-nodejs-bun:
 module-create-nodejs-npm:
 	@$(call log-info,Создание npm проекта: $(NAME)...)
 	@mkdir -p $(MODULE_TARGET)/$(NAME)
-	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && npm init -y && npm pkg set type=module" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && npm init -y && npm pkg set type=module"
 	@$(call log-success,npm проект создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-nodejs-pnpm
 module-create-nodejs-pnpm:
 	@$(call log-info,Создание pnpm проекта: $(NAME)...)
 	@mkdir -p $(MODULE_TARGET)/$(NAME)
-	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && pnpm init" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && pnpm init"
 	@$(call log-success,pnpm проект создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-nodejs-yarn
 module-create-nodejs-yarn:
 	@$(call log-info,Создание yarn проекта: $(NAME)...)
 	@mkdir -p $(MODULE_TARGET)/$(NAME)
-	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && yarn init -y" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && yarn init -y"
 	@$(call log-success,yarn проект создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-nodejs-nextjs
 module-create-nodejs-nextjs:
 	@$(call log-info,Создание Next.js проекта: $(NAME)...)
-	@$(MAKE) exec "cd $(MODULE_TARGET) && bunx create-next-app@latest $(NAME) --typescript --tailwind --app --no-src-dir --import-alias '@/*' --turbopack --skip-install" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET) && bunx create-next-app@latest $(NAME) --typescript --tailwind --app --no-src-dir --import-alias '@/*' --turbopack --skip-install"
 	@$(call log-success,Next.js проект создан: $(MODULE_TARGET)/$(NAME))
 	@$(call log-info,Установка зависимостей...)
-	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && bun install" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && bun install"
 	@$(call log-success,Зависимости установлены)
 
 .PHONY: module-create-nodejs-expo
 module-create-nodejs-expo:
 	@$(call log-info,Создание Expo проекта: $(NAME)...)
-	@$(MAKE) exec "cd $(MODULE_TARGET) && bunx create-expo-app@latest $(NAME) --template blank-typescript" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET) && bunx create-expo-app@latest $(NAME) --template blank-typescript"
 	@$(call log-success,Expo проект создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-nodejs-svelte
 module-create-nodejs-svelte:
 	@$(call log-info,Создание SvelteKit проекта: $(NAME)...)
-	@$(MAKE) exec "cd $(MODULE_TARGET) && bunx sv create $(NAME) --template minimal --types ts --no-add-ons --no-install" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET) && bunx sv create $(NAME) --template minimal --types ts --no-add-ons --no-install"
 	@$(call log-success,SvelteKit проект создан: $(MODULE_TARGET)/$(NAME))
 	@$(call log-info,Установка зависимостей...)
-	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && bun install" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && bun install"
 	@$(call log-success,Зависимости установлены)
 
 # ===================================
@@ -243,12 +243,12 @@ module-create-nodejs-svelte:
 module-create-php-composer-lib:
 	@$(call log-info,Создание Composer library: $(NAME)...)
 	@mkdir -p $(MODULE_TARGET)/$(NAME)
-	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && composer init --name='vendor/$(NAME)' --type=library --no-interaction" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && composer init --name='vendor/$(NAME)' --type=library --no-interaction"
 	@# Добавить test script
 	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
-		cd $(MODULE_TARGET)/$(NAME) && composer config scripts.test "echo 'php test passed'" >/dev/null 2>&1; \
+		cd $(MODULE_TARGET)/$(NAME) && composer config scripts.test "echo 'php test passed'"; \
 	else \
-		$(CONTAINER_RUNTIME) exec $(CONTAINER_NAME) sh -c 'cd $(MODULE_TARGET)/$(NAME) && composer config scripts.test "echo '"'"'php test passed'"'"'"' >/dev/null 2>&1; \
+		$(CONTAINER_RUNTIME) exec $(CONTAINER_NAME) sh -c 'cd $(MODULE_TARGET)/$(NAME) && composer config scripts.test "echo '"'"'php test passed'"'"'"'; \
 	fi
 	@$(call log-success,Composer library создан: $(MODULE_TARGET)/$(NAME))
 
@@ -256,18 +256,18 @@ module-create-php-composer-lib:
 module-create-php-composer-project:
 	@$(call log-info,Создание Composer project: $(NAME)...)
 	@mkdir -p $(MODULE_TARGET)/$(NAME)
-	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && composer init --name='vendor/$(NAME)' --type=project --no-interaction" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && composer init --name='vendor/$(NAME)' --type=project --no-interaction"
 	@$(call log-success,Composer project создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-php-laravel
 module-create-php-laravel:
 	@$(call log-info,Создание Laravel проекта: $(NAME)...)
 	@# Проверка установки Laravel installer
-	@if ! $(MAKE) exec "command -v laravel" >/dev/null 2>&1; then \
+	@if ! $(MAKE) exec "command -v laravel"; then \
 		$(call log-info,Установка Laravel installer...); \
-		$(MAKE) exec "composer global require laravel/installer" >/dev/null 2>&1; \
+		$(MAKE) exec "composer global require laravel/installer"; \
 	fi
-	@$(MAKE) exec "cd $(MODULE_TARGET) && laravel new $(NAME) --no-interaction" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET) && laravel new $(NAME) --no-interaction"
 	@$(call log-success,Laravel проект создан: $(MODULE_TARGET)/$(NAME))
 
 # ===================================
@@ -277,13 +277,13 @@ module-create-php-laravel:
 .PHONY: module-create-python-uv
 module-create-python-uv:
 	@$(call log-info,Создание UV проекта: $(NAME)...)
-	@$(MAKE) exec "cd $(MODULE_TARGET) && uv init $(NAME)" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET) && uv init $(NAME)"
 	@$(call log-success,UV проект создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-python-poetry
 module-create-python-poetry:
 	@$(call log-info,Создание Poetry проекта: $(NAME)...)
-	@$(MAKE) exec "cd $(MODULE_TARGET) && poetry new $(NAME)" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET) && poetry new $(NAME)"
 	@# Создать test_main.py
 	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
 		printf 'def test_main():\n    print("python test passed")\n    assert True\n' > $(MODULE_TARGET)/$(NAME)/tests/test_main.py; \
@@ -299,22 +299,22 @@ module-create-python-poetry:
 .PHONY: module-create-rust-bin
 module-create-rust-bin:
 	@$(call log-info,Создание Cargo binary: $(NAME)...)
-	@$(MAKE) exec "cd $(MODULE_TARGET) && cargo new $(NAME)" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET) && cargo new $(NAME)"
 	@$(call log-success,Cargo binary создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-rust-lib
 module-create-rust-lib:
 	@$(call log-info,Создание Cargo library: $(NAME)...)
-	@$(MAKE) exec "cd $(MODULE_TARGET) && cargo new $(NAME) --lib" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET) && cargo new $(NAME) --lib"
 	@$(call log-success,Cargo library создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-rust-dioxus
 module-create-rust-dioxus:
 	@$(call log-info,Создание Dioxus проекта: $(NAME)...)
 	@# Проверка установки dioxus-cli
-	@if ! $(MAKE) exec "command -v dx" >/dev/null 2>&1; then \
+	@if ! $(MAKE) exec "command -v dx"; then \
 		$(call log-info,Установка Dioxus CLI...); \
-		$(MAKE) exec "cargo install dioxus-cli" >/dev/null 2>&1; \
+		$(MAKE) exec "cargo install dioxus-cli"; \
 	fi
-	@$(MAKE) exec "cd $(MODULE_TARGET) && dx new $(NAME) --platform web" >/dev/null 2>&1
+	@$(MAKE) exec "cd $(MODULE_TARGET) && dx new $(NAME) --platform web"
 	@$(call log-success,Dioxus проект создан: $(MODULE_TARGET)/$(NAME))
