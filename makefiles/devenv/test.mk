@@ -23,9 +23,10 @@ devenv-test-internal:
 	@$(call log-section,Запуск автотестов DevContainer Workspace)
 	@printf "\n"
 
-	@# Остановка контейнера если запущен + очистка артефактов (без вывода)
+	@# Остановка контейнера если запущен + очистка артефактов
+	@$(call log-info,Очистка предыдущих тестовых артефактов...)
 	@if $(CONTAINER_RUNTIME) ps --format "{{.Names}}" | grep -q "^$(CONTAINER_NAME)$$" 2>/dev/null; then \
-		$(MAKE) down >/dev/null 2>&1; \
+		$(MAKE) down; \
 	fi
 	@if [ -d "$(TEST_DIR)" ]; then \
 		rm -rf $(TEST_DIR); \
@@ -33,16 +34,19 @@ devenv-test-internal:
 	@if [ -f "$(TEST_LOG)" ]; then \
 		rm -f $(TEST_LOG); \
 	fi
+	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Артефакты очищены\n\n"
 
-	@# Подготовка изолированного тестового окружения (без вывода)
+	@# Подготовка изолированного тестового окружения
+	@$(call log-info,Подготовка тестового окружения...)
 	@mkdir -p $(TEST_DIR)/modules
 	@cp Makefile $(TEST_DIR)/
 	@cp -r makefiles $(TEST_DIR)/
 	@cp -r .devcontainer $(TEST_DIR)/
 	@echo "=== Test Run: $$(date) ===" > $(TEST_LOG)
+	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Окружение подготовлено\n\n"
 
-	@# Подготовка тестовых модулей (без вывода)
-	@$(MAKE) setup-test-modules >/dev/null 2>&1
+	@# Подготовка тестовых модулей
+	@$(MAKE) setup-test-modules
 
 	@# Запуск групп тестов
 	@$(MAKE) test-commands-internal
@@ -70,20 +74,24 @@ setup-test-modules:
 	@$(call log-info,Создание тестовых модулей...)
 
 	@# Node.js модуль (Bun)
-	@$(MAKE) module MODULE_STACK=nodejs MODULE_TYPE=bun MODULE_NAME=test-nodejs MODULE_TARGET=$(TEST_DIR)/modules >/dev/null 2>&1
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-nodejs (bun)\n"
+	@printf "  → test-nodejs (bun)...\n"
+	@$(MAKE) module MODULE_STACK=nodejs MODULE_TYPE=bun MODULE_NAME=test-nodejs MODULE_TARGET=$(TEST_DIR)/modules
+	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-nodejs создан\n"
 
 	@# PHP модуль (Composer)
-	@$(MAKE) module MODULE_STACK=php MODULE_TYPE=composer-lib MODULE_NAME=test-php MODULE_TARGET=$(TEST_DIR)/modules >/dev/null 2>&1
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-php (composer)\n"
+	@printf "  → test-php (composer)...\n"
+	@$(MAKE) module MODULE_STACK=php MODULE_TYPE=composer-lib MODULE_NAME=test-php MODULE_TARGET=$(TEST_DIR)/modules
+	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-php создан\n"
 
 	@# Python модуль (Poetry)
-	@$(MAKE) module MODULE_STACK=python MODULE_TYPE=poetry MODULE_NAME=test-python MODULE_TARGET=$(TEST_DIR)/modules >/dev/null 2>&1
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-python (poetry)\n"
+	@printf "  → test-python (poetry)...\n"
+	@$(MAKE) module MODULE_STACK=python MODULE_TYPE=poetry MODULE_NAME=test-python MODULE_TARGET=$(TEST_DIR)/modules
+	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-python создан\n"
 
 	@# Rust модуль (Binary)
-	@$(MAKE) module MODULE_STACK=rust MODULE_TYPE=bin MODULE_NAME=test-rust MODULE_TARGET=$(TEST_DIR)/modules >/dev/null 2>&1
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-rust (cargo)\n"
+	@printf "  → test-rust (cargo)...\n"
+	@$(MAKE) module MODULE_STACK=rust MODULE_TYPE=bin MODULE_NAME=test-rust MODULE_TARGET=$(TEST_DIR)/modules
+	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-rust создан\n"
 	@printf "\n"
 
 # Тест базовых команд
