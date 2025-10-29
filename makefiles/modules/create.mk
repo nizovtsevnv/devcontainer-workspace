@@ -168,8 +168,8 @@ module-validate-and-create:
 		exit 1; \
 	fi
 
-	@# Создание директории если не существует
-	@mkdir -p $(MODULE_TARGET)
+	@# Создание директории если не существует (выполняется в контейнере для корректных прав)
+	@$(MAKE) exec "mkdir -p $(MODULE_TARGET)" >/dev/null 2>&1
 
 	@# Вызов генератора
 	@$(MAKE) module-create-$(STACK)-$(TYPE) NAME=$(NAME)
@@ -193,22 +193,19 @@ module-create-nodejs-bun:
 .PHONY: module-create-nodejs-npm
 module-create-nodejs-npm:
 	@$(call log-info,Создание npm проекта: $(NAME)...)
-	@mkdir -p $(MODULE_TARGET)/$(NAME)
-	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && npm init -y && npm pkg set type=module"
+	@$(MAKE) exec "mkdir -p $(MODULE_TARGET)/$(NAME) && cd $(MODULE_TARGET)/$(NAME) && npm init -y && npm pkg set type=module"
 	@$(call log-success,npm проект создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-nodejs-pnpm
 module-create-nodejs-pnpm:
 	@$(call log-info,Создание pnpm проекта: $(NAME)...)
-	@mkdir -p $(MODULE_TARGET)/$(NAME)
-	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && pnpm init"
+	@$(MAKE) exec "mkdir -p $(MODULE_TARGET)/$(NAME) && cd $(MODULE_TARGET)/$(NAME) && pnpm init"
 	@$(call log-success,pnpm проект создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-nodejs-yarn
 module-create-nodejs-yarn:
 	@$(call log-info,Создание yarn проекта: $(NAME)...)
-	@mkdir -p $(MODULE_TARGET)/$(NAME)
-	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && yarn init -y"
+	@$(MAKE) exec "mkdir -p $(MODULE_TARGET)/$(NAME) && cd $(MODULE_TARGET)/$(NAME) && yarn init -y"
 	@$(call log-success,yarn проект создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-nodejs-nextjs
@@ -242,8 +239,7 @@ module-create-nodejs-svelte:
 .PHONY: module-create-php-composer-lib
 module-create-php-composer-lib:
 	@$(call log-info,Создание Composer library: $(NAME)...)
-	@mkdir -p $(MODULE_TARGET)/$(NAME)
-	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && composer init --name='vendor/$(NAME)' --type=library --no-interaction"
+	@$(MAKE) exec "mkdir -p $(MODULE_TARGET)/$(NAME) && cd $(MODULE_TARGET)/$(NAME) && composer init --name='vendor/$(NAME)' --type=library --no-interaction"
 	@# Добавить test script
 	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
 		cd $(MODULE_TARGET)/$(NAME) && composer config scripts.test "echo 'php test passed'"; \
@@ -255,8 +251,7 @@ module-create-php-composer-lib:
 .PHONY: module-create-php-composer-project
 module-create-php-composer-project:
 	@$(call log-info,Создание Composer project: $(NAME)...)
-	@mkdir -p $(MODULE_TARGET)/$(NAME)
-	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && composer init --name='vendor/$(NAME)' --type=project --no-interaction"
+	@$(MAKE) exec "mkdir -p $(MODULE_TARGET)/$(NAME) && cd $(MODULE_TARGET)/$(NAME) && composer init --name='vendor/$(NAME)' --type=project --no-interaction"
 	@$(call log-success,Composer project создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-php-laravel
