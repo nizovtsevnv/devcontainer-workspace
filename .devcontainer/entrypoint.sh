@@ -34,10 +34,10 @@ if [ -d "$WORKSPACE_DIR" ]; then
         fi
     fi
 
-    # Если UID не совпадает и владелец root, изменить владельца
-    # Это может произойти при первом запуске контейнера
-    if [ "$CURRENT_UID" != "$WORKSPACE_UID" ] && [ "$WORKSPACE_UID" = "0" ]; then
-        echo "⚙️  Изменение владельца /workspace: root → $(whoami)"
+    # Если UID не совпадает, изменить владельца
+    # Это происходит когда контейнер запускается на хосте с другим UID
+    if [ "$CURRENT_UID" != "$WORKSPACE_UID" ]; then
+        echo "⚙️  Изменение владельца /workspace: UID ${WORKSPACE_UID} → ${CURRENT_UID}"
         sudo chown -R "${CURRENT_UID}:${CURRENT_GID}" "$WORKSPACE_DIR" 2>/dev/null || true
     fi
 fi
