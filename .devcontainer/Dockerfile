@@ -57,6 +57,13 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
   && rm -rf /var/lib/apt/lists/*
 
 # ===================================
+# Gum - интерактивные CLI компоненты
+# ===================================
+RUN curl -fsSL https://github.com/charmbracelet/gum/releases/download/v0.14.5/gum_0.14.5_Linux_x86_64.tar.gz | \
+  tar -xz -C /usr/local/bin gum && \
+  chmod +x /usr/local/bin/gum
+
+# ===================================
 # Node.js + npm инструменты
 # ===================================
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
@@ -231,6 +238,7 @@ RUN echo "========================================" \
   && echo "Make:      $(make --version | head -n1)" \
   && echo "jq:        $(jq --version)" \
   && echo "yq:        $(yq --version)" \
+  && echo "gum:       $(gum --version)" \
   && echo "----------------------------------------" \
   && echo "Node.js:   $(node --version)" \
   && echo "bun:       $(bun --version)" \
