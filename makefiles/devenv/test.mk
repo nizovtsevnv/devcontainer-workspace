@@ -36,15 +36,16 @@ devenv-test-internal:
 	fi
 	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Артефакты очищены\n\n"
 
-	@# Подготовка изолированного тестового окружения
+	@# Запуск контейнера
+	@$(MAKE) up >/dev/null 2>&1
+
+	@# Подготовка изолированного тестового окружения - ВСЁ из контейнера
 	@$(call log-info,Подготовка тестового окружения...)
-	@mkdir -p $(TEST_DIR)/modules
-	@cp Makefile $(TEST_DIR)/
-	@cp -r makefiles $(TEST_DIR)/
-	@cp -r .devcontainer $(TEST_DIR)/
-	@echo "=== Test Run: $$(date) ===" > $(TEST_LOG)
-	@# Исправить права доступа только на modules/, оставив корень для хоста
-	@$(MAKE) exec "sudo chown -R developer:developer $(TEST_DIR)/modules" >/dev/null 2>&1
+	@$(MAKE) exec "mkdir -p $(TEST_DIR)/modules && \
+		cp Makefile $(TEST_DIR)/ && \
+		cp -r makefiles $(TEST_DIR)/ && \
+		cp -r .devcontainer $(TEST_DIR)/ && \
+		echo '=== Test Run: $$(date) ===' > $(TEST_LOG)" >/dev/null 2>&1
 	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Окружение подготовлено\n\n"
 
 	@# Подготовка тестовых модулей
@@ -123,25 +124,25 @@ test-commands-internal:
 test-permissions-internal:
 	@printf "\n$(COLOR_INFO)═══ Тестирование прав доступа ═══$(COLOR_RESET)\n"
 
-	@# Создать файл в контейнере (в modules/ где developer имеет права)
+	@# Создать файл в контейнере
 	@$(call run-test,Создание файла в контейнере, \
-		$(MAKE) exec 'touch $(TEST_DIR)/modules/perm-test.txt' >/dev/null 2>&1)
+		$(MAKE) exec 'touch $(TEST_DIR)/perm-test.txt' >/dev/null 2>&1)
 
 	@# Проверить права файла
 	@EXPECTED_UID=$(HOST_UID); \
 	EXPECTED_GID=$(HOST_GID); \
-	ACTUAL_UID=$$(stat -c '%u' $(TEST_DIR)/modules/perm-test.txt 2>/dev/null); \
-	ACTUAL_GID=$$(stat -c '%g' $(TEST_DIR)/modules/perm-test.txt 2>/dev/null); \
+	ACTUAL_UID=$$(stat -c '%u' $(TEST_DIR)/perm-test.txt 2>/dev/null); \
+	ACTUAL_GID=$$(stat -c '%g' $(TEST_DIR)/perm-test.txt 2>/dev/null); \
 	$(call run-test,Файл имеет правильный UID:GID ($$EXPECTED_UID:$$EXPECTED_GID), \
 		[ "$$ACTUAL_UID" = "$$EXPECTED_UID" ] && [ "$$ACTUAL_GID" = "$$EXPECTED_GID" ])
 
 	@# Проверить возможность записи с хоста
 	@$(call run-test,Запись с хоста работает, \
-		echo "host-write" > $(TEST_DIR)/modules/perm-test.txt)
+		echo "host-write" > $(TEST_DIR)/perm-test.txt)
 
 	@# Проверить возможность чтения из контейнера
 	@$(call run-test,Чтение из контейнера работает, \
-		$(MAKE) exec 'cat $(TEST_DIR)/modules/perm-test.txt' 2>/dev/null | grep -q "host-write")
+		$(MAKE) exec 'cat $(TEST_DIR)/perm-test.txt' 2>/dev/null | grep -q "host-write")
 
 # Тест технологических стеков
 .PHONY: test-stacks-internal
