@@ -24,7 +24,7 @@ else
 		if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
 			$(CONTAINER_RUNTIME) run -d \
 				--name $(CONTAINER_NAME) \
-				--userns=keep-id \
+				--userns=keep-id:uid=$(HOST_UID),gid=$(HOST_GID) \
 				--network=host \
 				-v "$(WORKSPACE_ROOT):$(CONTAINER_WORKDIR):Z" \
 				-w $(CONTAINER_WORKDIR) \
@@ -36,6 +36,7 @@ else
 		else \
 			$(CONTAINER_RUNTIME) run -d \
 				--name $(CONTAINER_NAME) \
+				--user $(HOST_UID):$(HOST_GID) \
 				--network=host \
 				-v "$(WORKSPACE_ROOT):$(CONTAINER_WORKDIR)" \
 				-w $(CONTAINER_WORKDIR) \
