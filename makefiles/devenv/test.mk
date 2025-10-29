@@ -38,11 +38,13 @@ devenv-test-internal:
 
 	@# Подготовка изолированного тестового окружения
 	@$(call log-info,Подготовка тестового окружения...)
-	@mkdir -p $(TEST_DIR)/modules
+	@mkdir -p $(TEST_DIR)
 	@cp Makefile $(TEST_DIR)/
 	@cp -r makefiles $(TEST_DIR)/
 	@cp -r .devcontainer $(TEST_DIR)/
 	@echo "=== Test Run: $$(date) ===" > $(TEST_LOG)
+	@# Создать modules директорию внутри контейнера (с правильными правами)
+	@$(MAKE) exec "mkdir -p $(TEST_DIR)/modules"
 	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Окружение подготовлено\n\n"
 
 	@# Подготовка тестовых модулей
