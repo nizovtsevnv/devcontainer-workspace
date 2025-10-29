@@ -20,14 +20,6 @@ define run-test
 endef
 
 devenv-test-internal:
-	@# Проверка режима
-	@$(call check-project-init-status); \
-	if [ "$$STATUS" = "инициализирован" ]; then \
-		$(call log-error,Тесты доступны только в режиме разработки шаблона!); \
-		$(call log-info,Этот проект уже инициализирован); \
-		exit 1; \
-	fi
-
 	@$(call log-section,Запуск автотестов DevContainer Workspace)
 	@printf "\n"
 

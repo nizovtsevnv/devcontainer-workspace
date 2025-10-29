@@ -25,6 +25,22 @@ define log-section
 	printf "$(COLOR_SECTION)▶ %s$(COLOR_RESET)\n" "$(1)"
 endef
 
+# Определить версию шаблона (без префикса v)
+# В неинициализированном шаблоне: из git тега
+# В инициализированном проекте: из .template-version
+# Использование: $(call get-template-version)
+define get-template-version
+	$(shell \
+		if [ -f .template-version ]; then \
+			cat .template-version 2>/dev/null | sed 's/^v//' || echo "unknown"; \
+		else \
+			git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//' || \
+			git describe --tags 2>/dev/null | sed 's/^v//' || \
+			echo "unknown"; \
+		fi \
+	)
+endef
+
 # Проверка обязательной переменной
 # Использование: $(call require-var,VAR_NAME)
 define require-var

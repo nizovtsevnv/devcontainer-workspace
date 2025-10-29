@@ -102,8 +102,9 @@ devenv-init-internal:
 	else \
 		printf "  $(COLOR_INFO)ℹ$(COLOR_RESET) Текущая версия: $$CURRENT_VERSION\n"; \
 	fi; \
-	echo "$$CURRENT_VERSION" > .template-version; \
-	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Версия шаблона: $$CURRENT_VERSION\n"
+	CURRENT_VERSION_CLEAN=$$(echo "$$CURRENT_VERSION" | sed 's/^v//'); \
+	echo "$$CURRENT_VERSION_CLEAN" > .template-version; \
+	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Версия шаблона: $$CURRENT_VERSION_CLEAN\n"
 
 	@# Удаление файлов шаблона
 	@$(call log-info,Удаление файлов шаблона...)
@@ -191,11 +192,19 @@ devenv-version-internal:
 	fi; \
 	\
 	if [ "$$STATUS" = "инициализирован" ]; then \
-		TEMPLATE_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
+		if [ -f .template-version ]; then \
+			TEMPLATE_VERSION=$$(cat .template-version 2>/dev/null | sed 's/^v//' || echo "unknown"); \
+		else \
+			TEMPLATE_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//' || git describe --tags 2>/dev/null | sed 's/^v//' || echo "unknown"); \
+		fi; \
 		printf "  Версия шаблона:  $$TEMPLATE_VERSION\n"; \
 		printf "  Статус:          $(COLOR_SUCCESS)инициализирован$(COLOR_RESET)\n"; \
 	else \
-		CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null || git describe --tags 2>/dev/null || echo "unknown"); \
+		if [ -f .template-version ]; then \
+			CURRENT_VERSION=$$(cat .template-version 2>/dev/null | sed 's/^v//' || echo "unknown"); \
+		else \
+			CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//' || git describe --tags 2>/dev/null | sed 's/^v//' || echo "unknown"); \
+		fi; \
 		printf "  Версия:          $$CURRENT_VERSION\n"; \
 		printf "  Статус:          $(COLOR_WARNING)неинициализирован (разработка шаблона)$(COLOR_RESET)\n"; \
 	fi; \
@@ -207,21 +216,26 @@ devenv-version-internal:
 	fi; \
 	\
 	LATEST_TAG=$$(git ls-remote --tags $$REMOTE 2>/dev/null | grep -v '\^{}' | awk '{print $$2}' | sed 's|refs/tags/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | tail -1); \
-	CURRENT_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
+	LATEST_TAG_CLEAN=$$(echo "$$LATEST_TAG" | sed 's/^v//'); \
+	if [ -f .template-version ]; then \
+		CURRENT_VERSION=$$(cat .template-version 2>/dev/null | sed 's/^v//' || echo "unknown"); \
+	else \
+		CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//' || git describe --tags 2>/dev/null | sed 's/^v//' || echo "unknown"); \
+	fi; \
 	\
 	if [ -z "$$LATEST_TAG" ]; then \
 		$(call log-warning,Теги не найдены в upstream); \
 		printf "\n  Используйте: make devenv update для обновления\n"; \
 	elif [ "$$CURRENT_VERSION" = "unknown" ]; then \
 		printf "  $(COLOR_WARNING)Текущая версия неизвестна$(COLOR_RESET)\n"; \
-		printf "  $(COLOR_INFO)Последняя версия: $$LATEST_TAG$(COLOR_RESET)\n"; \
+		printf "  $(COLOR_INFO)Последняя версия: $$LATEST_TAG_CLEAN$(COLOR_RESET)\n"; \
 		printf "\n  Обновить: $(COLOR_SUCCESS)make devenv update$(COLOR_RESET)\n"; \
-	elif [ "$$LATEST_TAG" = "$$CURRENT_VERSION" ]; then \
+	elif [ "$$LATEST_TAG_CLEAN" = "$$CURRENT_VERSION" ]; then \
 		printf "  $(COLOR_SUCCESS)✓ У вас актуальная версия$(COLOR_RESET)\n"; \
 	else \
-		printf "  $(COLOR_WARNING)Доступна новая версия: $$LATEST_TAG$(COLOR_RESET)\n"; \
+		printf "  $(COLOR_WARNING)Доступна новая версия: $$LATEST_TAG_CLEAN$(COLOR_RESET)\n"; \
 		printf "\n$(COLOR_INFO)Changelog:$(COLOR_RESET)\n"; \
-		git log --oneline --decorate "$$CURRENT_VERSION..$$REMOTE/main" 2>/dev/null || \
+		git log --oneline --decorate "v$$CURRENT_VERSION..$$REMOTE/main" 2>/dev/null || \
 			printf "  (недоступно, используйте: git fetch $$REMOTE)\n"; \
 		printf "\n  Обновить: $(COLOR_SUCCESS)make devenv update$(COLOR_RESET)\n"; \
 	fi
@@ -256,23 +270,35 @@ devenv-update-project:
 	@git fetch template --tags --force >/dev/null 2>&1 || true
 
 	@# Определить текущую и последнюю версии
-	@CURRENT_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
+	@if [ -f .template-version ]; then \
+		CURRENT_VERSION=$$(cat .template-version 2>/dev/null | sed 's/^v//' || echo "unknown"); \
+	else \
+		CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//' || git describe --tags 2>/dev/null | sed 's/^v//' || echo "unknown"); \
+	fi; \
 	LATEST_VERSION=$$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | tail -1); \
+	LATEST_VERSION_CLEAN=$$(echo "$$LATEST_VERSION" | sed 's/^v//'); \
 	printf "Режим:                     $(COLOR_SUCCESS)инициализированный проект$(COLOR_RESET)\n"; \
 	printf "Текущая версия шаблона:    $$CURRENT_VERSION\n"; \
-	printf "Последняя версия шаблона:  $$LATEST_VERSION\n"
+	printf "Последняя версия шаблона:  $$LATEST_VERSION_CLEAN\n"
 
 	@# Интерактивный выбор версии
 	@LATEST_VERSION=$$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | tail -1); \
-	CURRENT_VERSION=$$(cat .template-version 2>/dev/null || echo "unknown"); \
-	printf "\nИзменения ($$CURRENT_VERSION..$$LATEST_VERSION):\n"; \
-	git log --oneline --decorate "$$CURRENT_VERSION..$$LATEST_VERSION" 2>/dev/null || { \
+	LATEST_VERSION_CLEAN=$$(echo "$$LATEST_VERSION" | sed 's/^v//'); \
+	if [ -f .template-version ]; then \
+		CURRENT_VERSION=$$(cat .template-version 2>/dev/null | sed 's/^v//' || echo "unknown"); \
+	else \
+		CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//' || git describe --tags 2>/dev/null | sed 's/^v//' || echo "unknown"); \
+	fi; \
+	ALL_VERSIONS=$$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | sed 's/^v//' | tr '\n' ', ' | sed 's/, $$//' ); \
+	printf "\nДоступные версии: $$ALL_VERSIONS\n"; \
+	printf "\nИзменения ($$CURRENT_VERSION..$$LATEST_VERSION_CLEAN):\n"; \
+	git log --oneline --decorate "v$$CURRENT_VERSION..$$LATEST_VERSION" 2>/dev/null || { \
 		printf "  $(COLOR_WARNING)(changelog недоступен)$(COLOR_RESET)\n"; \
 	}; \
 	\
-	printf "\nВыберите версию [$$LATEST_VERSION]: "; \
+	printf "\nВыберите версию [$$LATEST_VERSION_CLEAN]: "; \
 	read TARGET_VERSION; \
-	TARGET_VERSION=$${TARGET_VERSION:-$$LATEST_VERSION}; \
+	TARGET_VERSION=$${TARGET_VERSION:-$$LATEST_VERSION_CLEAN}; \
 	\
 	HAS_PROJECT_GITHUB="no"; \
 	if [ -d .github ]; then \
@@ -282,7 +308,7 @@ devenv-update-project:
 	if [ "$$TARGET_VERSION" = "main" ]; then \
 		MERGE_REF="template/main"; \
 	else \
-		MERGE_REF="$$TARGET_VERSION"; \
+		MERGE_REF="v$$TARGET_VERSION"; \
 	fi; \
 	git merge --allow-unrelated-histories --no-commit --no-ff "$$MERGE_REF" >/dev/null 2>&1; \
 	MERGE_STATUS=$$?; \
@@ -344,7 +370,7 @@ devenv-update-project:
 	if [ "$$TARGET_VERSION" != "main" ]; then \
 		NEW_VERSION="$$TARGET_VERSION"; \
 	else \
-		NEW_VERSION=$$(git describe --tags template/main 2>/dev/null || echo "main"); \
+		NEW_VERSION=$$(git describe --tags template/main 2>/dev/null | sed 's/^v//' || echo "main"); \
 	fi; \
 	\
 	echo "$$NEW_VERSION" > .template-version; \
@@ -381,7 +407,7 @@ devenv-update-template:
 	fi
 
 	@# Определить версию шаблона через git
-	@TEMPLATE_VERSION=$$(git describe --tags 2>/dev/null || echo "unknown"); \
+	@TEMPLATE_VERSION=$$(git describe --tags 2>/dev/null | sed 's/^v//' || echo "unknown"); \
 	printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \
 	printf "  Версия шаблона: $$TEMPLATE_VERSION\n"
 

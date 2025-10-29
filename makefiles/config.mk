@@ -28,7 +28,17 @@ export HOST_GID := $(shell id -g)
 
 # DevContainer настройки
 CONTAINER_NAME := devcontainer-workspace-dev
-CONTAINER_IMAGE := ghcr.io/nizovtsevnv/devcontainer-workspace:latest
+# Автоопределение версии шаблона и образа
+TEMPLATE_VERSION := $(shell \
+	if [ -f .template-version ]; then \
+		cat .template-version 2>/dev/null | sed 's/^v//' || echo "latest"; \
+	else \
+		git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//' || \
+		git describe --tags 2>/dev/null | sed 's/^v//' || \
+		echo "latest"; \
+	fi)
+CONTAINER_IMAGE_VERSION := $(TEMPLATE_VERSION)
+CONTAINER_IMAGE := ghcr.io/nizovtsevnv/devcontainer-workspace:$(CONTAINER_IMAGE_VERSION)
 CONTAINER_WORKDIR := /workspace
 DEVCONTAINER_USER := developer
 DEVCONTAINER_WORKDIR := /workspace
