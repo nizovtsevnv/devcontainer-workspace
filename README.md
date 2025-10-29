@@ -39,24 +39,46 @@ code .
 
 При первом открытии в контейнере автоматически выполнится инициализация проекта.
 
-### 4. Добавить субмодули проекта
+### 4. Создать модули проекта
 
 ```bash
-# Добавить субмодуль (сервис, приложение, библиотеку)
+# Создать новый модуль (интерактивно)
+make module
+# → Выбор стека (Node.js, PHP, Python, Rust)
+# → Выбор типа проекта (bun, npm, composer, poetry, cargo, etc.)
+# → Ввод имени модуля
+# → Автоматическая инициализация проекта
+
+# Или с параметрами (для автоматизации)
+make module MODULE_STACK=nodejs MODULE_TYPE=bun MODULE_NAME=my-service
+make module MODULE_STACK=python MODULE_TYPE=poetry MODULE_NAME=my-lib
+make module MODULE_STACK=rust MODULE_TYPE=bin MODULE_NAME=my-tool
+```
+
+**Поддерживаемые типы модулей:**
+- **Node.js**: bun, npm, pnpm, yarn, Next.js, Expo, SvelteKit
+- **PHP**: composer-lib, composer-project, Laravel
+- **Python**: uv, poetry
+- **Rust**: bin (приложение), lib (библиотека), Dioxus (веб-приложение)
+
+### 5. Альтернативно: добавить существующие субмодули
+
+```bash
+# Добавить существующий репозиторий как субмодуль
 git submodule add git@github.com:user/service-name.git modules/service-name
 
 # Инициализировать субмодули
 git submodule update --init --recursive
 ```
 
-### 5. Разработка
+### 6. Разработка
 
 Используйте воспроизводимую среду для:
 - Разработки кода в субмодулях
 - Написания документации в `doc/` и `README.md`
 - Автоматизации через `make`
 
-### 6. Публикация проекта
+### 7. Публикация проекта
 
 ```bash
 # Настроить удаленный репозиторий для вашего проекта
@@ -284,6 +306,10 @@ make down                  # Остановка
 make sh                    # Интерактивный shell
 make exec '<команда>'      # Выполнение команды в контейнере
 make version               # Версии инструментов
+
+# Создание модулей
+make module                # Создать новый модуль (интерактивно)
+make module MODULE_STACK=nodejs MODULE_TYPE=bun MODULE_NAME=my-service
 
 # Команды модулей
 make <модуль>              # Справка по модулю

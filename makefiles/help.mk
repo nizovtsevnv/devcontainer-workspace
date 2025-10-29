@@ -15,6 +15,7 @@ help:
 
 	@# Секция: Модули проекта
 	@printf "\n$(COLOR_INFO)Модули проекта:$(COLOR_RESET)\n"
+	@printf "  $(COLOR_SUCCESS)make %-17s$(COLOR_RESET) Создать новый модуль (Node.js, PHP, Python, Rust)\n" "module"
 	@if [ -n "$(MODULE_NAMES)" ]; then \
 		for module in $(MODULE_NAMES); do \
 			module_path="$(MODULES_DIR)/$$module"; \
@@ -53,6 +54,6 @@ help:
 		printf "\n  Используйте: $(COLOR_INFO)make <модуль>$(COLOR_RESET) для просмотра доступных команд\n"; \
 		printf "  Пример: $(COLOR_SUCCESS)make hello install$(COLOR_RESET), $(COLOR_SUCCESS)make hello test$(COLOR_RESET), $(COLOR_SUCCESS)make hello build$(COLOR_RESET)\n"; \
 	else \
-		printf "  В каталоге modules/ ничего нет\n"; \
+		printf "  В каталоге modules/ ничего нет. Создайте первый модуль командой: $(COLOR_SUCCESS)make module$(COLOR_RESET)\n"; \
 	fi
 	@printf "\n"

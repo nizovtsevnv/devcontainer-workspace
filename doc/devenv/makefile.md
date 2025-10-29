@@ -17,6 +17,12 @@
 # Запуск среды разработки (с авто-инициализацией при первом запуске)
 make up
 
+# Создать новый модуль (интерактивно)
+make module
+
+# Или с параметрами
+make module MODULE_STACK=nodejs MODULE_TYPE=bun MODULE_NAME=my-service
+
 # Войти в shell контейнера
 make sh
 
@@ -109,6 +115,89 @@ make version
 ```
 
 Выводит версии: Node.js, PHP, Rust, Docker, Git
+
+### Создание модулей
+
+#### `make module`
+Создание нового модуля проекта с интерактивным выбором стека и типа.
+
+**Интерактивное использование:**
+```bash
+make module
+# → Выбор стека: Node.js, PHP, Python, Rust
+# → Выбор типа проекта
+# → Ввод имени модуля
+# → Автоматическая инициализация
+```
+
+**С параметрами (для автоматизации):**
+```bash
+# Node.js проекты
+make module MODULE_STACK=nodejs MODULE_TYPE=bun MODULE_NAME=my-service
+make module MODULE_STACK=nodejs MODULE_TYPE=npm MODULE_NAME=my-lib
+make module MODULE_STACK=nodejs MODULE_TYPE=nextjs MODULE_NAME=my-app
+make module MODULE_STACK=nodejs MODULE_TYPE=expo MODULE_NAME=mobile-app
+make module MODULE_STACK=nodejs MODULE_TYPE=svelte MODULE_NAME=web-ui
+
+# PHP проекты
+make module MODULE_STACK=php MODULE_TYPE=composer-lib MODULE_NAME=my-lib
+make module MODULE_STACK=php MODULE_TYPE=laravel MODULE_NAME=api
+
+# Python проекты
+make module MODULE_STACK=python MODULE_TYPE=uv MODULE_NAME=data-processor
+make module MODULE_STACK=python MODULE_TYPE=poetry MODULE_NAME=ml-model
+
+# Rust проекты
+make module MODULE_STACK=rust MODULE_TYPE=bin MODULE_NAME=cli-tool
+make module MODULE_STACK=rust MODULE_TYPE=lib MODULE_NAME=shared-lib
+make module MODULE_STACK=rust MODULE_TYPE=dioxus MODULE_NAME=web-ui
+```
+
+**Поддерживаемые типы модулей:**
+
+**Node.js** (`MODULE_STACK=nodejs`):
+- `bun` - TypeScript проект с Bun
+- `npm` - проект с npm
+- `pnpm` - проект с pnpm
+- `yarn` - проект с Yarn
+- `nextjs` - Next.js приложение с TypeScript и Tailwind
+- `expo` - React Native приложение с Expo
+- `svelte` - SvelteKit приложение
+
+**PHP** (`MODULE_STACK=php`):
+- `composer-lib` - Composer библиотека
+- `composer-project` - Composer проект
+- `laravel` - Laravel приложение
+
+**Python** (`MODULE_STACK=python`):
+- `uv` - проект с UV (быстрый, рекомендуется)
+- `poetry` - проект с Poetry
+
+**Rust** (`MODULE_STACK=rust`):
+- `bin` - исполняемое приложение
+- `lib` - библиотека
+- `dioxus` - веб-приложение на Dioxus
+
+**Параметры:**
+- `MODULE_STACK` - технологический стек (nodejs, php, python, rust)
+- `MODULE_TYPE` - тип проекта (см. выше)
+- `MODULE_NAME` - имя модуля (буквы, цифры, дефис, underscore)
+- `MODULE_TARGET` - директория для создания (по умолчанию `modules`)
+
+**Примеры:**
+```bash
+# Создать Next.js приложение
+make module MODULE_STACK=nodejs MODULE_TYPE=nextjs MODULE_NAME=frontend
+
+# Создать Laravel API
+make module MODULE_STACK=php MODULE_TYPE=laravel MODULE_NAME=api
+
+# Создать Python библиотеку с Poetry
+make module MODULE_STACK=python MODULE_TYPE=poetry MODULE_NAME=data-lib
+
+# Создать Rust CLI инструмент
+make module MODULE_STACK=rust MODULE_TYPE=bin MODULE_NAME=deploy-tool
+```
 
 ## Команды модулей
 
