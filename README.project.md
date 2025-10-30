@@ -73,7 +73,7 @@ make ml uv run main.py      # Запустить Python скрипт
 
 ```bash
 # Проверить доступные обновления
-make devenv version
+make devenv status
 
 # Применить обновления
 make devenv update

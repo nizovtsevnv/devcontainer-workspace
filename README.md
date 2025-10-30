@@ -225,7 +225,7 @@ make sh      # Интерактивная оболочка
 
 ```bash
 # Проверить доступные обновления
-make devenv version
+make devenv status
 # Показывает:
 # → Текущую версию шаблона
 # → Дату инициализации проекта
@@ -298,7 +298,7 @@ sudo usermod -aG docker $USER
 # Команды шаблона
 make devenv init           # Ручная инициализация (если нужно)
 make devenv update         # Обновить версию шаблона
-make devenv version        # Текущая и актуальная версия шаблона
+make devenv status         # Текущий статус и версия шаблона
 
 # Управление средой разработки
 make up                    # Запуск DevContainer (с авто-инициализацией)

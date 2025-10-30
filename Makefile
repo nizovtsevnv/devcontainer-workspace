@@ -9,7 +9,7 @@
 #   make up                - запуск среды (с авто-инициализацией)
 #   make exec '<команда>'  - выполнение команды
 #   make <модуль> <команда> - работа с модулем
-#   make devenv <cmd>      - управление шаблоном (init, version, update)
+#   make devenv <cmd>      - управление шаблоном (init, test, status, update)
 #
 
 .DEFAULT_GOAL := help
@@ -19,7 +19,7 @@ MAKEFLAGS += --no-print-directory
 # Порядок важен: сначала config, потom functions, detect, остальные - в любом порядке
 include makefiles/config.mk
 include makefiles/functions.mk
-include makefiles/detect.mk
+include makefiles/modules/detect.mk
 include makefiles/core.mk
 include makefiles/modules/commands.mk
 include makefiles/modules/create.mk
