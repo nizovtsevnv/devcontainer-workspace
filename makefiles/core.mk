@@ -93,7 +93,7 @@ exec:
 	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
 		bash -c "$$COMMAND"; \
 	else \
-		$(CONTAINER_RUNTIME) exec -w $(CONTAINER_WORKDIR) $(CONTAINER_NAME) bash -c "$$COMMAND"; \
+		$(CONTAINER_RUNTIME) exec $(CONTAINER_NAME) bash -c "cd $(CONTAINER_WORKDIR) && $$COMMAND"; \
 	fi
 
 ## version: Вывод версий инструментов DevContainer и модулей
