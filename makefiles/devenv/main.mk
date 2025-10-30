@@ -183,7 +183,16 @@ devenv-version-internal:
 		if [ -f .template-version ]; then \
 			TEMPLATE_VERSION=$$(cat .template-version 2>/dev/null | sed 's/^v//' || echo "unknown"); \
 		else \
-			TEMPLATE_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//' || git describe --tags 2>/dev/null | sed 's/^v//' || echo "unknown"); \
+			if git describe --tags --exact-match HEAD >/dev/null 2>&1; then \
+				TEMPLATE_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//'); \
+			else \
+				LAST_TAG=$$(git describe --tags --abbrev=0 2>/dev/null); \
+				if [ -n "$$LAST_TAG" ]; then \
+					TEMPLATE_VERSION="$$(echo "$$LAST_TAG" | sed 's/^v//') (модифицированный)"; \
+				else \
+					TEMPLATE_VERSION="unknown"; \
+				fi; \
+			fi; \
 		fi; \
 		printf "  Версия шаблона:  $$TEMPLATE_VERSION\n"; \
 		printf "  Статус:          $(COLOR_SUCCESS)инициализирован$(COLOR_RESET)\n"; \
@@ -191,7 +200,16 @@ devenv-version-internal:
 		if [ -f .template-version ]; then \
 			CURRENT_VERSION=$$(cat .template-version 2>/dev/null | sed 's/^v//' || echo "unknown"); \
 		else \
-			CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//' || git describe --tags 2>/dev/null | sed 's/^v//' || echo "unknown"); \
+			if git describe --tags --exact-match HEAD >/dev/null 2>&1; then \
+				CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//'); \
+			else \
+				LAST_TAG=$$(git describe --tags --abbrev=0 2>/dev/null); \
+				if [ -n "$$LAST_TAG" ]; then \
+					CURRENT_VERSION="$$(echo "$$LAST_TAG" | sed 's/^v//') (модифицированный)"; \
+				else \
+					CURRENT_VERSION="unknown"; \
+				fi; \
+			fi; \
 		fi; \
 		printf "  Версия:          $$CURRENT_VERSION\n"; \
 		printf "  Статус:          $(COLOR_WARNING)неинициализирован (разработка шаблона)$(COLOR_RESET)\n"; \
@@ -207,8 +225,21 @@ devenv-version-internal:
 	LATEST_TAG_CLEAN=$$(echo "$$LATEST_TAG" | sed 's/^v//'); \
 	if [ -f .template-version ]; then \
 		CURRENT_VERSION=$$(cat .template-version 2>/dev/null | sed 's/^v//' || echo "unknown"); \
+		VERSION_SUFFIX=""; \
 	else \
-		CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//' || git describe --tags 2>/dev/null | sed 's/^v//' || echo "unknown"); \
+		if git describe --tags --exact-match HEAD >/dev/null 2>&1; then \
+			CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//'); \
+			VERSION_SUFFIX=""; \
+		else \
+			LAST_TAG=$$(git describe --tags --abbrev=0 2>/dev/null); \
+			if [ -n "$$LAST_TAG" ]; then \
+				CURRENT_VERSION=$$(echo "$$LAST_TAG" | sed 's/^v//'); \
+				VERSION_SUFFIX=" (модифицированный)"; \
+			else \
+				CURRENT_VERSION="unknown"; \
+				VERSION_SUFFIX=""; \
+			fi; \
+		fi; \
 	fi; \
 	\
 	if [ -z "$$LATEST_TAG" ]; then \
@@ -219,7 +250,11 @@ devenv-version-internal:
 		printf "  $(COLOR_INFO)Последняя версия: $$LATEST_TAG_CLEAN$(COLOR_RESET)\n"; \
 		printf "\n  Обновить: $(COLOR_SUCCESS)make devenv update$(COLOR_RESET)\n"; \
 	elif [ "$$LATEST_TAG_CLEAN" = "$$CURRENT_VERSION" ]; then \
-		printf "  $(COLOR_SUCCESS)✓ У вас актуальная версия$(COLOR_RESET)\n"; \
+		if [ -n "$$VERSION_SUFFIX" ]; then \
+			printf "  $(COLOR_INFO)У вас актуальная версия$$VERSION_SUFFIX$(COLOR_RESET)\n"; \
+		else \
+			printf "  $(COLOR_SUCCESS)✓ У вас актуальная версия$(COLOR_RESET)\n"; \
+		fi; \
 	else \
 		printf "  $(COLOR_WARNING)Доступна новая версия: $$LATEST_TAG_CLEAN$(COLOR_RESET)\n"; \
 		printf "\n$(COLOR_INFO)Changelog:$(COLOR_RESET)\n"; \
