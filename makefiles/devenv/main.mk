@@ -146,6 +146,12 @@ devenv-init-internal:
 	else \
 		printf "  $(COLOR_WARNING)⊘$(COLOR_RESET) Правило modules/*/ не найдено в .gitignore\n"; \
 	fi
+	@if grep -q "^\.template-version$$" .gitignore 2>/dev/null; then \
+		sed -i '/^\.template-version$$/d' .gitignore; \
+		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) .template-version удалён из .gitignore (будет отслеживаться в проекте)\n"; \
+	else \
+		printf "  $(COLOR_WARNING)⊘$(COLOR_RESET) .template-version не найден в .gitignore\n"; \
+	fi
 
 	@# Initial commit
 	@printf "\n$(COLOR_INFO)Создать initial commit? [Y/n]:$(COLOR_RESET) "; \
