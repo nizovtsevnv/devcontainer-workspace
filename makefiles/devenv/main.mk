@@ -66,20 +66,13 @@ init test update:
 .PHONY: devenv-init-internal
 
 devenv-init-internal:
-	@printf "$(COLOR_SECTION)▶ Инициализация проекта$(COLOR_RESET)\n"; \
-	\
-	if git remote get-url template >/dev/null 2>&1; then \
+	@$(call log-section,Инициализация проекта)
+	@if git remote get-url template >/dev/null 2>&1; then \
 		$(call log-error,Проект уже инициализирован); \
 		$(call log-info,Remote 'template' уже существует); \
 		exit 1; \
-	fi; \
-	\
-	printf "Шаблон будет переведён в режим проекта, это действие необратимо, продолжить? [y/N]: "; \
-	read answer; \
-	if [ "$$answer" != "y" ] && [ "$$answer" != "Y" ]; then \
-		printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Отменено\n"; \
-		exit 1; \
 	fi
+	@$(call ask-confirm,Шаблон будет переведён в режим проекта\, это действие необратимо\, продолжить)
 
 	@# Проверка версии и автоматический checkout на последний тег
 	@CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null); \
