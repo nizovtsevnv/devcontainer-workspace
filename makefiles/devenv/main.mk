@@ -11,12 +11,14 @@
 # Функция вывода справки по devenv командам
 define devenv-help
 	$(call check-project-init-status); \
+	help_data=""; \
 	if [ "$$STATUS" = "не инициализирован" ]; then \
-		printf "  $(COLOR_SUCCESS)make devenv init      $(COLOR_RESET)Инициализация проекта из шаблона\n"; \
-		printf "  $(COLOR_SUCCESS)make devenv test      $(COLOR_RESET)Запустить автотесты (только для разработки)\n"; \
+		help_data="make devenv init<COL>Инициализация проекта из шаблона<ROW>"; \
+		help_data="$$help_data""make devenv test<COL>Запустить автотесты (только для разработки)<ROW>"; \
 	fi; \
-	printf "  $(COLOR_SUCCESS)make devenv update    $(COLOR_RESET)Обновить версию шаблона\n"; \
-	printf "  $(COLOR_SUCCESS)make devenv version   $(COLOR_RESET)Текущая и актуальная версия шаблона\n"
+	help_data="$$help_data""make devenv status<COL>Текущий статус и версия шаблона<ROW>"; \
+	help_data="$$help_data""make devenv update<COL>Обновить версию шаблона"; \
+	printf '%s\n' "$$help_data" | { $(call print-table,20); }
 endef
 
 # ===================================
@@ -26,419 +28,34 @@ endef
 # Получить подкоманду (первый аргумент после devenv)
 DEVENV_CMD := $(word 2,$(MAKECMDGOALS))
 
-## devenv: Команды управления шаблоном (init, test, version, update)
+## devenv: Команды управления шаблоном (init, test, status, update)
 devenv:
 	@if [ -z "$(DEVENV_CMD)" ]; then \
-		$(call log-section,Команды управления шаблоном проекта); \
+		$(call log-info,Команды управления шаблоном проекта:); \
 		$(call devenv-help); \
 	elif [ "$(DEVENV_CMD)" = "init" ]; then \
 		$(MAKE) devenv-init-internal; \
 	elif [ "$(DEVENV_CMD)" = "test" ]; then \
 		$(MAKE) devenv-test-internal; \
-	elif [ "$(DEVENV_CMD)" = "version" ]; then \
-		$(MAKE) devenv-version-internal; \
+	elif [ "$(DEVENV_CMD)" = "status" ]; then \
+		$(MAKE) devenv-status-internal; \
 	elif [ "$(DEVENV_CMD)" = "update" ]; then \
 		$(MAKE) devenv-update-internal; \
 	else \
 		$(call log-error,Неизвестная подкоманда: $(DEVENV_CMD)); \
-		$(call log-info,Доступны: init, test, version, update); \
+		$(call log-info,Доступны: init, test, status, update); \
 		exit 1; \
 	fi
 
-# Роутинг version: может быть как `make version`, так и `make devenv version`
-.PHONY: version
-version:
-	@if [ "$(word 1,$(MAKECMDGOALS))" = "devenv" ]; then \
-		exit 0; \
-	else \
-		$(MAKE) -f $(firstword $(MAKEFILE_LIST)) core-version; \
-	fi
-
-# Stub targets для подавления ошибок Make при вызове `make devenv init/test/update`
-.PHONY: init test update
-init test update:
+# Stub targets для подавления ошибок Make при вызове `make devenv init/test/status/update`
+.PHONY: init test status update
+init test status update:
 	@:
 
 # ===================================
-# Команда: devenv init
+# Подключение модулей команд
 # ===================================
 
-.PHONY: devenv-init-internal
-
-devenv-init-internal:
-	@$(call log-section,Инициализация проекта)
-	@if git remote get-url template >/dev/null 2>&1; then \
-		$(call log-error,Проект уже инициализирован); \
-		$(call log-info,Remote 'template' уже существует); \
-		exit 1; \
-	fi
-	@$(call ask-confirm,Шаблон будет переведён в режим проекта\, это действие необратимо\, продолжить)
-
-	@# Проверка версии и автоматический checkout на последний тег
-	@CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null); \
-	if [ -z "$$CURRENT_VERSION" ]; then \
-		$(call log-warning,HEAD не на tagged коммите); \
-		LATEST_TAG=$$(git tag --list | sort -V | tail -1); \
-		if [ -z "$$LATEST_TAG" ]; then \
-			$(call log-error,Теги не найдены в репозитории); \
-			$(call log-info,Убедитесь что вы клонировали репозиторий с тегами); \
-			exit 1; \
-		fi; \
-		printf "  $(COLOR_INFO)ℹ$(COLOR_RESET) Автоматическое переключение на: $$LATEST_TAG\n"; \
-		git checkout -q "$$LATEST_TAG"; \
-		CURRENT_VERSION="$$LATEST_TAG"; \
-	else \
-		printf "  $(COLOR_INFO)ℹ$(COLOR_RESET) Текущая версия: $$CURRENT_VERSION\n"; \
-	fi; \
-	CURRENT_VERSION_CLEAN=$$(echo "$$CURRENT_VERSION" | sed 's/^v//'); \
-	echo "$$CURRENT_VERSION_CLEAN" > .template-version; \
-	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Версия шаблона: $$CURRENT_VERSION_CLEAN\n"
-
-	@# Удаление файлов шаблона
-	@$(call log-info,Удаление файлов шаблона...)
-	@for file in .github/ README.project.md; do \
-		if [ -e "$$file" ]; then \
-			printf "  $(COLOR_WARNING)✗$(COLOR_RESET) $$file\n"; \
-			rm -rf "$$file"; \
-		fi; \
-	done
-
-	@# Пересоздание Git репозитория
-	@$(call log-info,Инициализация Git репозитория...)
-	@TEMPLATE_URL=$$(git remote get-url origin 2>/dev/null); \
-	if [ -z "$$TEMPLATE_URL" ]; then \
-		$(call log-error,Не удалось определить URL шаблона из origin); \
-		$(call log-info,Убедитесь что вы клонировали шаблон через git clone); \
-		exit 1; \
-	fi; \
-	printf "  $(COLOR_INFO)ℹ$(COLOR_RESET) Сохранён URL шаблона: $$TEMPLATE_URL\n"; \
-	\
-	rm -rf .git; \
-	printf "  $(COLOR_WARNING)✗$(COLOR_RESET) Удалена история шаблона (.git/)\n"; \
-	\
-	git init -q; \
-	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Создан новый репозиторий\n"; \
-	\
-	git remote add template "$$TEMPLATE_URL"; \
-	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Добавлен remote 'template'\n"; \
-	\
-	git fetch template --tags --force >/dev/null 2>&1 || true; \
-	printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Получены теги из template\n"
-
-	@# Интерактивный выбор нового origin
-	@printf "\n$(COLOR_INFO)URL нового origin? [Enter для skip]:$(COLOR_RESET) "; \
-	read NEW_ORIGIN; \
-	if [ -n "$$NEW_ORIGIN" ]; then \
-		git remote add origin "$$NEW_ORIGIN"; \
-		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Добавлен remote 'origin': $$NEW_ORIGIN\n"; \
-	else \
-		printf "  $(COLOR_INFO)ℹ$(COLOR_RESET) Remote 'origin' не настроен (можно добавить позже)\n"; \
-	fi
-
-	@# Создание README проекта
-	@$(call create-project-readme)
-
-	@# Обновление .gitignore для проекта
-	@$(call log-info,Обновление .gitignore...)
-	@if grep -q "^modules/\*/" .gitignore 2>/dev/null; then \
-		sed -i '/^# Modules (template development)/,/^modules\/\*\//d' .gitignore; \
-		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Правило modules/*/ удалено из .gitignore\n"; \
-	else \
-		printf "  $(COLOR_WARNING)⊘$(COLOR_RESET) Правило modules/*/ не найдено в .gitignore\n"; \
-	fi
-	@if grep -q "^\.template-version$$" .gitignore 2>/dev/null; then \
-		sed -i '/^\.template-version$$/d' .gitignore; \
-		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) .template-version удалён из .gitignore (будет отслеживаться в проекте)\n"; \
-	else \
-		printf "  $(COLOR_WARNING)⊘$(COLOR_RESET) .template-version не найден в .gitignore\n"; \
-	fi
-
-	@# Initial commit
-	@printf "\n$(COLOR_INFO)Создать initial commit? [Y/n]:$(COLOR_RESET) "; \
-	read DO_COMMIT; \
-	if [ "$$DO_COMMIT" != "n" ] && [ "$$DO_COMMIT" != "N" ]; then \
-		git add . 2>/dev/null || true; \
-		git commit -m "chore: initialize project from devcontainer-workspace template" 2>/dev/null || true; \
-		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Initial commit создан\n"; \
-	fi
-
-	@printf "\n$(COLOR_SUCCESS)✓ Проект успешно инициализирован!$(COLOR_RESET)\n"
-	@printf "\n$(COLOR_INFO)Следующие шаги:$(COLOR_RESET)\n"
-	@printf "  1. Настройте README.md\n"
-	@printf "  2. Добавьте модули в modules/\n"
-	@printf "  3. Запустите: make up\n"
-
-# ===================================
-# Команда: devenv version
-# ===================================
-
-.PHONY: devenv-version-internal
-
-devenv-version-internal:
-	@$(call log-section,Текущий статус шаблона разработки)
-
-	@# Определить текущую версию и статус
-	@$(call check-project-init-status); \
-	if [ "$$STATUS" = "инициализирован" ]; then \
-		REMOTE="template"; \
-	else \
-		REMOTE="origin"; \
-	fi; \
-	\
-	if [ "$$STATUS" = "инициализирован" ]; then \
-		if [ -f .template-version ]; then \
-			TEMPLATE_VERSION=$$(cat .template-version 2>/dev/null | sed 's/^v//' || echo "unknown"); \
-		else \
-			if git describe --tags --exact-match HEAD >/dev/null 2>&1; then \
-				TEMPLATE_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//'); \
-			else \
-				LAST_TAG=$$(git describe --tags --abbrev=0 2>/dev/null); \
-				if [ -n "$$LAST_TAG" ]; then \
-					TEMPLATE_VERSION="$$(echo "$$LAST_TAG" | sed 's/^v//') (модифицированный)"; \
-				else \
-					TEMPLATE_VERSION="unknown"; \
-				fi; \
-			fi; \
-		fi; \
-		printf "  Версия шаблона:  $$TEMPLATE_VERSION\n"; \
-		printf "  Статус:          $(COLOR_SUCCESS)инициализирован$(COLOR_RESET)\n"; \
-	else \
-		if [ -f .template-version ]; then \
-			CURRENT_VERSION=$$(cat .template-version 2>/dev/null | sed 's/^v//' || echo "unknown"); \
-		else \
-			if git describe --tags --exact-match HEAD >/dev/null 2>&1; then \
-				CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//'); \
-			else \
-				LAST_TAG=$$(git describe --tags --abbrev=0 2>/dev/null); \
-				if [ -n "$$LAST_TAG" ]; then \
-					CURRENT_VERSION="$$(echo "$$LAST_TAG" | sed 's/^v//') (модифицированный)"; \
-				else \
-					CURRENT_VERSION="unknown"; \
-				fi; \
-			fi; \
-		fi; \
-		printf "  Версия:          $$CURRENT_VERSION\n"; \
-		printf "  Статус:          $(COLOR_WARNING)неинициализирован (разработка шаблона)$(COLOR_RESET)\n"; \
-	fi; \
-	\
-	printf "\n$(COLOR_INFO)Проверка обновлений из $$REMOTE...$(COLOR_RESET)\n"; \
-	if ! git fetch $$REMOTE --tags >/dev/null 2>&1; then \
-		$(call log-error,Не удалось fetch из $$REMOTE remote); \
-		exit 1; \
-	fi; \
-	\
-	LATEST_TAG=$$(git ls-remote --tags $$REMOTE 2>/dev/null | grep -v '\^{}' | awk '{print $$2}' | sed 's|refs/tags/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | tail -1); \
-	LATEST_TAG_CLEAN=$$(echo "$$LATEST_TAG" | sed 's/^v//'); \
-	if [ -f .template-version ]; then \
-		CURRENT_VERSION=$$(cat .template-version 2>/dev/null | sed 's/^v//' || echo "unknown"); \
-		VERSION_SUFFIX=""; \
-	else \
-		if git describe --tags --exact-match HEAD >/dev/null 2>&1; then \
-			CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//'); \
-			VERSION_SUFFIX=""; \
-		else \
-			LAST_TAG=$$(git describe --tags --abbrev=0 2>/dev/null); \
-			if [ -n "$$LAST_TAG" ]; then \
-				CURRENT_VERSION=$$(echo "$$LAST_TAG" | sed 's/^v//'); \
-				VERSION_SUFFIX=" (модифицированный)"; \
-			else \
-				CURRENT_VERSION="unknown"; \
-				VERSION_SUFFIX=""; \
-			fi; \
-		fi; \
-	fi; \
-	\
-	if [ -z "$$LATEST_TAG" ]; then \
-		$(call log-warning,Теги не найдены в upstream); \
-		printf "\n  Используйте: make devenv update для обновления\n"; \
-	elif [ "$$CURRENT_VERSION" = "unknown" ]; then \
-		printf "  $(COLOR_WARNING)Текущая версия неизвестна$(COLOR_RESET)\n"; \
-		printf "  $(COLOR_INFO)Последняя версия: $$LATEST_TAG_CLEAN$(COLOR_RESET)\n"; \
-		printf "\n  Обновить: $(COLOR_SUCCESS)make devenv update$(COLOR_RESET)\n"; \
-	elif [ "$$LATEST_TAG_CLEAN" = "$$CURRENT_VERSION" ]; then \
-		if [ -n "$$VERSION_SUFFIX" ]; then \
-			printf "  $(COLOR_INFO)У вас актуальная версия$$VERSION_SUFFIX$(COLOR_RESET)\n"; \
-		else \
-			printf "  $(COLOR_SUCCESS)✓ У вас актуальная версия$(COLOR_RESET)\n"; \
-		fi; \
-	else \
-		printf "  $(COLOR_WARNING)Доступна новая версия: $$LATEST_TAG_CLEAN$(COLOR_RESET)\n"; \
-		printf "\n$(COLOR_INFO)Changelog:$(COLOR_RESET)\n"; \
-		git log --oneline --decorate "v$$CURRENT_VERSION..$$REMOTE/main" 2>/dev/null || \
-			printf "  (недоступно, используйте: git fetch $$REMOTE)\n"; \
-		printf "\n  Обновить: $(COLOR_SUCCESS)make devenv update$(COLOR_RESET)\n"; \
-	fi
-
-# ===================================
-# Команда: devenv update
-# ===================================
-
-.PHONY: devenv-update-internal
-
-devenv-update-internal:
-	@$(call log-section,Обновление версии шаблона)
-
-	@# Определить статус инициализации
-	@$(call check-project-init-status); \
-	if [ "$$STATUS" = "инициализирован" ]; then \
-		$(MAKE) devenv-update-project; \
-	else \
-		$(MAKE) devenv-update-template; \
-	fi
-
-# Обновление инициализированного проекта (через merge с template)
-.PHONY: devenv-update-project
-devenv-update-project:
-	@# Проверка: есть uncommitted changes
-	@$(call require-clean-working-tree)
-
-	@# Остановить контейнер если запущен (чтобы не работал на старой версии)
-	@$(call stop-container-if-running)
-
-	@# Fetch обновлений
-	@git fetch template --tags --force >/dev/null 2>&1 || true
-
-	@# Определить текущую и последнюю версии
-	@if [ -f .template-version ]; then \
-		CURRENT_VERSION=$$(cat .template-version 2>/dev/null | sed 's/^v//' || echo "unknown"); \
-	else \
-		CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//' || git describe --tags 2>/dev/null | sed 's/^v//' || echo "unknown"); \
-	fi; \
-	LATEST_VERSION=$$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | tail -1); \
-	LATEST_VERSION_CLEAN=$$(echo "$$LATEST_VERSION" | sed 's/^v//'); \
-	printf "Режим:                     $(COLOR_SUCCESS)инициализированный проект$(COLOR_RESET)\n"; \
-	printf "Текущая версия шаблона:    $$CURRENT_VERSION\n"; \
-	printf "Последняя версия шаблона:  $$LATEST_VERSION_CLEAN\n"
-
-	@# Интерактивный выбор версии
-	@LATEST_VERSION=$$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | tail -1); \
-	LATEST_VERSION_CLEAN=$$(echo "$$LATEST_VERSION" | sed 's/^v//'); \
-	if [ -f .template-version ]; then \
-		CURRENT_VERSION=$$(cat .template-version 2>/dev/null | sed 's/^v//' || echo "unknown"); \
-	else \
-		CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//' || git describe --tags 2>/dev/null | sed 's/^v//' || echo "unknown"); \
-	fi; \
-	ALL_VERSIONS=$$(git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | sed 's/^v//' | tr '\n' ', ' | sed 's/, $$//' ); \
-	printf "\nДоступные версии: $$ALL_VERSIONS\n"; \
-	printf "\nИзменения ($$CURRENT_VERSION..$$LATEST_VERSION_CLEAN):\n"; \
-	git log --oneline --decorate "v$$CURRENT_VERSION..$$LATEST_VERSION" 2>/dev/null || { \
-		printf "  $(COLOR_WARNING)(changelog недоступен)$(COLOR_RESET)\n"; \
-	}; \
-	\
-	printf "\nВыберите версию [$$LATEST_VERSION_CLEAN]: "; \
-	read TARGET_VERSION; \
-	TARGET_VERSION=$${TARGET_VERSION:-$$LATEST_VERSION_CLEAN}; \
-	\
-	HAS_PROJECT_GITHUB="no"; \
-	if [ -d .github ]; then \
-		HAS_PROJECT_GITHUB="yes"; \
-	fi; \
-	\
-	if [ "$$TARGET_VERSION" = "main" ]; then \
-		MERGE_REF="template/main"; \
-	else \
-		MERGE_REF="v$$TARGET_VERSION"; \
-	fi; \
-	git merge --allow-unrelated-histories --no-commit --no-ff "$$MERGE_REF" >/dev/null 2>&1; \
-	MERGE_STATUS=$$?; \
-	\
-	CONFLICTS=$$(git diff --name-only --diff-filter=U 2>/dev/null); \
-	if [ -n "$$CONFLICTS" ]; then \
-		echo "$$CONFLICTS" | while read conflict_file; do \
-			case "$$conflict_file" in \
-				.template-version|Makefile|makefiles/*|.devcontainer/*) \
-					git checkout --theirs "$$conflict_file" 2>/dev/null; \
-					git add "$$conflict_file" 2>/dev/null; \
-					;; \
-				doc/devenv/*) \
-					git checkout --theirs "$$conflict_file" 2>/dev/null; \
-					git add "$$conflict_file" 2>/dev/null; \
-					;; \
-				README.project.md) \
-					git rm -f "$$conflict_file" 2>/dev/null || true; \
-					;; \
-			.github/*) \
-				if [ "$$HAS_PROJECT_GITHUB" = "no" ]; then \
-					git rm -f "$$conflict_file" 2>/dev/null || true; \
-				else \
-					git checkout --ours "$$conflict_file" 2>/dev/null; \
-					git add "$$conflict_file" 2>/dev/null; \
-				fi; \
-				;; \
-			.gitignore|README.md|.editorconfig|doc/*|config/*) \
-				git checkout --ours "$$conflict_file" 2>/dev/null; \
-				git add "$$conflict_file" 2>/dev/null; \
-				;; \
-			*) \
-				printf "$(COLOR_WARNING)⚠$(COLOR_RESET) $$conflict_file (требует ручного разрешения)\n"; \
-				;; \
-			esac; \
-		done; \
-		\
-		UNRESOLVED=$$(git diff --name-only --diff-filter=U 2>/dev/null); \
-		if [ -n "$$UNRESOLVED" ]; then \
-			printf "\n$(COLOR_ERROR)✗ Нерешённые конфликты:$(COLOR_RESET)\n"; \
-			echo "$$UNRESOLVED" | while read file; do \
-				printf "  $(COLOR_WARNING)⚠$(COLOR_RESET)  $$file\n"; \
-			done; \
-			printf "\n$(COLOR_INFO)Разрешите конфликты и выполните:$(COLOR_RESET)\n"; \
-			printf "  git add <файлы>\n"; \
-			printf "  git commit\n"; \
-			exit 1; \
-		fi; \
-	fi; \
-	\
-	if [ -f README.project.md ]; then \
-		git rm -f README.project.md >/dev/null 2>&1 || true; \
-	fi; \
-	\
-	if [ "$$HAS_PROJECT_GITHUB" = "no" ] && [ -d .github ]; then \
-		git rm -rf .github >/dev/null 2>&1 || true; \
-	fi; \
-	\
-	if [ "$$TARGET_VERSION" != "main" ]; then \
-		NEW_VERSION="$$TARGET_VERSION"; \
-	else \
-		NEW_VERSION=$$(git describe --tags template/main 2>/dev/null | sed 's/^v//' || echo "main"); \
-	fi; \
-	\
-	echo "$$NEW_VERSION" > .template-version; \
-	git add .template-version; \
-	git commit -m "chore: update devenv template to $$NEW_VERSION" >/dev/null 2>&1 || true; \
-	\
-	printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \
-	printf "  Новая версия: $$NEW_VERSION\n"
-
-	@# Обновить Docker образ и пересоздать контейнер
-	@$(call update-container-image)
-
-# Обновление неинициализированного шаблона (простой pull)
-.PHONY: devenv-update-template
-devenv-update-template:
-	@$(call log-info,Режим: неинициализированный шаблон)
-
-	@# Проверка: есть uncommitted changes
-	@$(call require-clean-working-tree)
-
-	@# Остановить контейнер если запущен (чтобы не работал на старой версии)
-	@$(call stop-container-if-running)
-
-	@# Определить текущую ветку
-	@CURRENT_BRANCH=$$(git branch --show-current); \
-	$(call log-info,Обновление ветки: $$CURRENT_BRANCH)
-
-	@# Pull изменений
-	@if git pull 2>&1; then \
-		printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Изменения получены\n"; \
-	else \
-		$(call log-error,Не удалось выполнить git pull); \
-		exit 1; \
-	fi
-
-	@# Определить версию шаблона через git
-	@TEMPLATE_VERSION=$$(git describe --tags 2>/dev/null | sed 's/^v//' || echo "unknown"); \
-	printf "\n$(COLOR_SUCCESS)✓ Обновление завершено!$(COLOR_RESET)\n"; \
-	printf "  Версия шаблона: $$TEMPLATE_VERSION\n"
-
-	@# Обновить Docker образ и пересоздать контейнер
-	@$(call update-container-image)
+include makefiles/devenv/init.mk
+include makefiles/devenv/status.mk
+include makefiles/devenv/update.mk

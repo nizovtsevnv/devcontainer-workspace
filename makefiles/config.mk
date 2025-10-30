@@ -27,7 +27,12 @@ export HOST_UID := $(shell id -u)
 export HOST_GID := $(shell id -g)
 
 # DevContainer настройки
-CONTAINER_NAME := devcontainer-workspace-dev
+# Генерация уникального имени контейнера на основе имени директории проекта
+# Это позволяет каждому проекту иметь свой собственный контейнер без конфликтов
+# Формат: <имя-директории>-devcontainer
+# Пример: для /path/to/myproject получится myproject-devcontainer
+WORKSPACE_BASENAME := $(shell basename "$(WORKSPACE_ROOT)")
+CONTAINER_NAME := $(WORKSPACE_BASENAME)-devcontainer
 # Автоопределение версии шаблона и образа
 TEMPLATE_VERSION := $(shell \
 	if [ -f .template-version ]; then \

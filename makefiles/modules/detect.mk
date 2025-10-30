@@ -39,24 +39,6 @@ $(strip \
 )
 endef
 
-# Получить список всех доступных Node.js менеджеров в модуле
-# Параметр: $(1) - путь к модулю
-# Возвращает: список менеджеров с lock файлами + дефолтный
-define get-nodejs-managers
-$(strip \
-	$(if $(wildcard $(1)/package-lock.json),npm) \
-	$(if $(wildcard $(1)/yarn.lock),yarn) \
-	$(if $(wildcard $(1)/pnpm-lock.yaml),pnpm) \
-	$(if $(wildcard $(1)/bun.lockb),bun) \
-	$(if $(and \
-		$(if $(wildcard $(1)/package-lock.json),,1), \
-		$(if $(wildcard $(1)/yarn.lock),,1), \
-		$(if $(wildcard $(1)/pnpm-lock.yaml),,1), \
-		$(if $(wildcard $(1)/bun.lockb),,1) \
-	),bun) \
-)
-endef
-
 # ===================================
 # Функции определения пакетных менеджеров Python
 # ===================================
@@ -75,24 +57,6 @@ $(strip \
 )
 endef
 
-# Получить список всех доступных Python менеджеров в модуле
-# Параметр: $(1) - путь к модулю
-# Возвращает: список менеджеров с lock файлами + дефолтный
-define get-python-managers
-$(strip \
-	$(if $(wildcard $(1)/requirements.txt),pip) \
-	$(if $(wildcard $(1)/Pipfile),pipenv) \
-	$(if $(wildcard $(1)/poetry.lock),poetry) \
-	$(if $(wildcard $(1)/uv.lock),uv) \
-	$(if $(and \
-		$(if $(wildcard $(1)/requirements.txt),,1), \
-		$(if $(wildcard $(1)/Pipfile),,1), \
-		$(if $(wildcard $(1)/poetry.lock),,1), \
-		$(if $(wildcard $(1)/uv.lock),,1) \
-	),uv) \
-)
-endef
-
 # ===================================
 # Функции определения пакетных менеджеров PHP
 # ===================================
@@ -101,13 +65,6 @@ endef
 # Параметр: $(1) - путь к модулю
 # Возвращает: composer
 define detect-php-manager
-composer
-endef
-
-# Получить список PHP менеджеров (всегда composer)
-# Параметр: $(1) - путь к модулю
-# Возвращает: composer
-define get-php-managers
 composer
 endef
 
@@ -122,23 +79,9 @@ define detect-rust-manager
 cargo
 endef
 
-# Получить список Rust менеджеров (всегда cargo)
-# Параметр: $(1) - путь к модулю
-# Возвращает: cargo
-define get-rust-managers
-cargo
-endef
-
 # ===================================
 # Вспомогательные функции
 # ===================================
-
-# Проверить, содержит ли список технологий указанную технологию
-# Параметр: $(1) - список технологий, $(2) - искомая технология
-# Возвращает: непустая строка если найдено
-define has-tech
-$(filter $(2),$(1))
-endef
 
 # Получить primary пакетный менеджер для технологии
 # Параметр: $(1) - путь к модулю, $(2) - технология (nodejs|python|php|rust)
@@ -162,4 +105,77 @@ $(strip \
 	$(if $(filter php,$(2)),$(call get-php-managers,$(1))) \
 	$(if $(filter rust,$(2)),$(call get-rust-managers,$(1))) \
 )
+endef
+
+# ===================================
+# Функции получения информации о модулях
+# ===================================
+
+# Получить только версию модуля (без типа)
+# Параметр: $(1) - путь к модулю
+# Возвращает: строку вида "1.0.0" или пустую строку
+# Использование: version=$$($(call get-module-version,$(MODULE_PATH)))
+define get-module-version
+	module_path="$(1)"; \
+	version=""; \
+	\
+	if [ -f "$$module_path/package.json" ]; then \
+		version=$$(grep -m1 '"version"' "$$module_path/package.json" | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || echo ""); \
+	elif [ -f "$$module_path/composer.json" ]; then \
+		version=$$(grep -m1 '"version"' "$$module_path/composer.json" | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || echo ""); \
+	elif [ -f "$$module_path/pyproject.toml" ]; then \
+		version=$$(grep -m1 '^version[[:space:]]*=' "$$module_path/pyproject.toml" | sed 's/.*version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/' || echo ""); \
+	elif [ -f "$$module_path/Cargo.toml" ]; then \
+		version=$$(grep -m1 '^version[[:space:]]*=' "$$module_path/Cargo.toml" | sed 's/.*version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/' || echo ""); \
+	fi; \
+	\
+	echo "$$version"
+endef
+
+# Получить информацию о версиях модуля (композиция файловой проверки + get-module-version)
+# Параметр: $(1) - путь к модулю
+# Возвращает: строку вида "Node.js-модуль 1.0.0, Rust-модуль 0.1.0"
+# Использование: tech_info=$$($(call get-module-info,$(MODULE_PATH)))
+define get-module-info
+	module_path="$(1)"; \
+	version=$$($(call get-module-version,$(1))); \
+	tech_info=""; \
+	\
+	if [ -f "$$module_path/package.json" ]; then \
+		[ -n "$$tech_info" ] && tech_info="$$tech_info, "; \
+		if [ -n "$$version" ]; then \
+			tech_info="$$tech_info""Node.js-модуль $$version"; \
+		else \
+			tech_info="$$tech_info""Node.js-модуль"; \
+		fi; \
+	fi; \
+	\
+	if [ -f "$$module_path/composer.json" ]; then \
+		[ -n "$$tech_info" ] && tech_info="$$tech_info, "; \
+		if [ -n "$$version" ]; then \
+			tech_info="$$tech_info""PHP-модуль $$version"; \
+		else \
+			tech_info="$$tech_info""PHP-модуль"; \
+		fi; \
+	fi; \
+	\
+	if [ -f "$$module_path/pyproject.toml" ] || [ -f "$$module_path/requirements.txt" ] || [ -f "$$module_path/setup.py" ]; then \
+		[ -n "$$tech_info" ] && tech_info="$$tech_info, "; \
+		if [ -n "$$version" ]; then \
+			tech_info="$$tech_info""Python-модуль $$version"; \
+		else \
+			tech_info="$$tech_info""Python-модуль"; \
+		fi; \
+	fi; \
+	\
+	if [ -f "$$module_path/Cargo.toml" ]; then \
+		[ -n "$$tech_info" ] && tech_info="$$tech_info, "; \
+		if [ -n "$$version" ]; then \
+			tech_info="$$tech_info""Rust-модуль $$version"; \
+		else \
+			tech_info="$$tech_info""Rust-модуль"; \
+		fi; \
+	fi; \
+	\
+	echo "$$tech_info"
 endef

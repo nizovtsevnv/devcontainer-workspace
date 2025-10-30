@@ -110,11 +110,11 @@ ifneq ($(filter $(FIRST_GOAL),$(MODULE_NAMES)),)
       .PHONY: $(MODULE_NAME)
       $(MODULE_NAME):
 	@if [ -z "$(PM_COMMAND)" ]; then \
-		printf "$(COLOR_SECTION)▶ Модуль $(MODULE_NAME): $(PACKAGE_MANAGER) --help$(COLOR_RESET)\\n"; \
+		$(call log-section,Модуль $(MODULE_NAME)\: $(PACKAGE_MANAGER) --help); \
 	else \
-		printf "$(COLOR_SECTION)▶ Модуль $(MODULE_NAME): $(PACKAGE_MANAGER) $(PM_COMMAND)$(COLOR_RESET)\\n"; \
+		$(call log-section,Модуль $(MODULE_NAME)\: $(PACKAGE_MANAGER) $(PM_COMMAND)); \
 	fi
-	@$(call ensure-container-running)
+	@$(call ensure-devenv-ready)
 	@if [ -z "$(PM_COMMAND)" ]; then \
 		if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
 			cd "$(MODULE_PATH)" && $(PACKAGE_MANAGER) --help; \
@@ -154,8 +154,8 @@ ifneq ($(filter $(FIRST_GOAL),$(MODULE_NAMES)),)
         # Target существует в Makefile - делегируем ему
         .PHONY: $(MODULE_NAME)
         $(MODULE_NAME):
-	@$(call ensure-container-running)
-	@printf "$(COLOR_SECTION)▶ Модуль $(MODULE_NAME): $(MODULE_CMD)$(COLOR_RESET)\\n"
+	@$(call ensure-devenv-ready)
+	@$(call log-section,Модуль $(MODULE_NAME)\: $(MODULE_CMD))
 	@cd "$(MODULE_PATH)" && $(MAKE) $(MODULE_CMD) $(REST_GOALS)
 
         # Подавить ошибки для аргументов
@@ -173,8 +173,8 @@ ifneq ($(filter $(FIRST_GOAL),$(MODULE_NAMES)),)
           # Несколько технологий - требуем Makefile
           .PHONY: $(MODULE_NAME)
           $(MODULE_NAME):
-	@printf "$(COLOR_ERROR)✗ ERROR:$(COLOR_RESET) Модуль '$(MODULE_NAME)' содержит несколько технологий: $(MODULE_TECH)\\n" >&2
-	@printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Создайте modules/$(MODULE_NAME)/Makefile для определения команды '$(SECOND_GOAL)'\\n"
+	@$(call log-error,Модуль '$(MODULE_NAME)' содержит несколько технологий: $(MODULE_TECH))
+	@$(call log-info,Создайте modules/$(MODULE_NAME)/Makefile для определения команды '$(SECOND_GOAL)')
 	@exit 1
 
           .PHONY: $(MODULE_CMD) $(REST_GOALS)
@@ -204,11 +204,11 @@ ifneq ($(filter $(FIRST_GOAL),$(MODULE_NAMES)),)
           .PHONY: $(MODULE_NAME)
           $(MODULE_NAME):
 	@if [ -z "$(PM_AUTO)" ]; then \
-		printf "$(COLOR_ERROR)✗ ERROR:$(COLOR_RESET) Неизвестная технология для модуля '$(MODULE_NAME)'\\n" >&2; \
+		$(call log-error,Неизвестная технология для модуля '$(MODULE_NAME)'); \
 		exit 1; \
 	fi
-	@printf "$(COLOR_SECTION)▶ Модуль $(MODULE_NAME): $(PM_AUTO) $(MAPPED_CMD) $(REST_GOALS)$(COLOR_RESET)\\n"
-	@$(call ensure-container-running)
+	@$(call log-section,Модуль $(MODULE_NAME)\: $(PM_AUTO) $(MAPPED_CMD) $(REST_GOALS))
+	@$(call ensure-devenv-ready)
 	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
 		cd "$(MODULE_PATH)" && $(PM_AUTO) $(MAPPED_CMD) $(REST_GOALS); \
 	else \
@@ -227,82 +227,63 @@ ifneq ($(filter $(FIRST_GOAL),$(MODULE_NAMES)),)
     # Только имя модуля без команды
     .PHONY: $(MODULE_NAME)
     $(MODULE_NAME):
-	@printf "$(COLOR_SECTION)▶ Модуль: $(MODULE_NAME)$(COLOR_RESET)\\n"
-	@# Вывод версии модуля
-	@module_path="$(MODULE_PATH)"; \
-	versions=""; \
-	if [ -f "$$module_path/Cargo.toml" ]; then \
-		rust_ver=$$(grep '^version = ' "$$module_path/Cargo.toml" | head -1 | sed 's/version = "\(.*\)"/\1/' | xargs); \
-		if [ -n "$$rust_ver" ]; then \
-			versions="$$versions$$rust_ver (Rust)"; \
-		fi; \
-	fi; \
-	if [ -f "$$module_path/package.json" ]; then \
-		node_ver=$$(grep '"version":' "$$module_path/package.json" | head -1 | sed 's/.*"version": "\(.*\)".*/\1/' | xargs); \
-		if [ -n "$$node_ver" ]; then \
-			[ -n "$$versions" ] && versions="$$versions, "; \
-			versions="$$versions$$node_ver (Node.js)"; \
-		fi; \
-	fi; \
-	if [ -f "$$module_path/composer.json" ]; then \
-		php_ver=$$(grep '"version":' "$$module_path/composer.json" | head -1 | sed 's/.*"version": "\(.*\)".*/\1/' | xargs); \
-		if [ -n "$$php_ver" ]; then \
-			[ -n "$$versions" ] && versions="$$versions, "; \
-			versions="$$versions$$php_ver (PHP)"; \
-		fi; \
-	fi; \
-	if [ -f "$$module_path/pyproject.toml" ]; then \
-		python_ver=$$(grep '^version = ' "$$module_path/pyproject.toml" | head -1 | sed 's/version = "\(.*\)"/\1/' | xargs); \
-		if [ -n "$$python_ver" ]; then \
-			[ -n "$$versions" ] && versions="$$versions, "; \
-			versions="$$versions$$python_ver (Python)"; \
-		fi; \
-	fi; \
-	if [ -n "$$versions" ]; then \
-		printf "Версия: $$versions\\n"; \
+	@$(call log-info,Модуль: $(MODULE_NAME))
+	@# Вывод типа и версии модуля
+	@version=$$($(call get-module-version,$(MODULE_PATH))); \
+	tech_list="$(MODULE_TECH)"; \
+	if [ -n "$$version" ] && [ -n "$$tech_list" ]; then \
+		printf '%s\n' "Тип<COL>$$tech_list<ROW>Версия<COL>$$version" | { $(call print-table,16); }; \
+	elif [ -n "$$tech_list" ]; then \
+		printf '%s\n' "Тип<COL>$$tech_list" | { $(call print-table,16); }; \
 	fi
 	@# Вывод инструментов
 	@if [ -n "$(MODULE_TECH)" ]; then \
-		printf "\\nИнструменты:\\n"; \
+		printf "\\n"; \
+		$(call log-info,Инструменты:); \
+		commands_data=""; \
 		for tech in $(MODULE_TECH); do \
 			case $$tech in \
 				nodejs) \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) build      $(COLOR_RESET)Собрать для production\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) bun        $(COLOR_RESET)Выполнить команду пакетного менеджера Bun\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) dev        $(COLOR_RESET)Запустить dev-сервер\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) format     $(COLOR_RESET)Отформатировать код\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) install    $(COLOR_RESET)Установить зависимости\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) lint       $(COLOR_RESET)Проверить код линтером\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) npm        $(COLOR_RESET)Выполнить команду пакетного менеджера npm\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) pnpm       $(COLOR_RESET)Выполнить команду пакетного менеджера pnpm\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) test       $(COLOR_RESET)Запустить тесты\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) yarn       $(COLOR_RESET)Выполнить команду пакетного менеджера Yarn\\n"; \
+					[ -n "$$commands_data" ] && commands_data="$$commands_data<ROW>"; \
+					commands_data="$$commands_data""make $(MODULE_NAME) build<COL>Собрать для production"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) bun<COL>Выполнить команду пакетного менеджера Bun"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) dev<COL>Запустить dev-сервер"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) format<COL>Отформатировать код"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) install<COL>Установить зависимости"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) lint<COL>Проверить код линтером"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) npm<COL>Выполнить команду пакетного менеджера npm"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) pnpm<COL>Выполнить команду пакетного менеджера pnpm"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) test<COL>Запустить тесты"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) yarn<COL>Выполнить команду пакетного менеджера Yarn"; \
 					;; \
 				php) \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) build      $(COLOR_RESET)Собрать для production\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) composer   $(COLOR_RESET)Выполнить команду пакетного менеджера Composer\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) install    $(COLOR_RESET)Установить зависимости\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) lint       $(COLOR_RESET)Проверить код линтером\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) test       $(COLOR_RESET)Запустить тесты\\n"; \
+					[ -n "$$commands_data" ] && commands_data="$$commands_data<ROW>"; \
+					commands_data="$$commands_data""make $(MODULE_NAME) build<COL>Собрать для production"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) composer<COL>Выполнить команду пакетного менеджера Composer"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) install<COL>Установить зависимости"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) lint<COL>Проверить код линтером"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) test<COL>Запустить тесты"; \
 					;; \
 				python) \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) format     $(COLOR_RESET)Отформатировать код\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) install    $(COLOR_RESET)Установить зависимости\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) lint       $(COLOR_RESET)Проверить код линтером\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) pip        $(COLOR_RESET)Выполнить команду пакетного менеджера pip\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) pipenv     $(COLOR_RESET)Выполнить команду пакетного менеджера Pipenv\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) poetry     $(COLOR_RESET)Выполнить команду пакетного менеджера Poetry\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) test       $(COLOR_RESET)Запустить тесты\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) uv         $(COLOR_RESET)Выполнить команду пакетного менеджера uv\\n"; \
+					[ -n "$$commands_data" ] && commands_data="$$commands_data<ROW>"; \
+					commands_data="$$commands_data""make $(MODULE_NAME) format<COL>Отформатировать код"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) install<COL>Установить зависимости"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) lint<COL>Проверить код линтером"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) pip<COL>Выполнить команду пакетного менеджера pip"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) pipenv<COL>Выполнить команду пакетного менеджера Pipenv"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) poetry<COL>Выполнить команду пакетного менеджера Poetry"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) test<COL>Запустить тесты"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) uv<COL>Выполнить команду пакетного менеджера uv"; \
 					;; \
 				rust) \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) build      $(COLOR_RESET)Собрать релиз\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) cargo      $(COLOR_RESET)Выполнить команду пакетного менеджера Cargo\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) format     $(COLOR_RESET)Отформатировать код\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) install    $(COLOR_RESET)Установить зависимости\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) lint       $(COLOR_RESET)Проверить код clippy\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) run        $(COLOR_RESET)Запустить приложение\\n"; \
-					printf "  $(COLOR_SUCCESS)make $(MODULE_NAME) test       $(COLOR_RESET)Запустить тесты\\n"; \
+					[ -n "$$commands_data" ] && commands_data="$$commands_data<ROW>"; \
+					commands_data="$$commands_data""make $(MODULE_NAME) build<COL>Собрать релиз"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) cargo<COL>Выполнить команду пакетного менеджера Cargo"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) format<COL>Отформатировать код"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) install<COL>Установить зависимости"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) lint<COL>Проверить код clippy"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) run<COL>Запустить приложение"; \
+					commands_data="$$commands_data<ROW>make $(MODULE_NAME) test<COL>Запустить тесты"; \
 					;; \
 				makefile) \
 					printf "\\nMakefile команды:\\n"; \
@@ -310,9 +291,13 @@ ifneq ($(filter $(FIRST_GOAL),$(MODULE_NAMES)),)
 					;; \
 			esac; \
 		done; \
+		if [ -n "$$commands_data" ]; then \
+			printf '%s\n' "$$commands_data" | { $(call print-table,30); }; \
+		fi; \
 	else \
-		printf "\\n$(COLOR_WARNING)⚠ WARNING:$(COLOR_RESET) Технологии не найдены в модуле\\n"; \
-		printf "$(COLOR_INFO)ℹ INFO:$(COLOR_RESET) Создайте маркерные файлы (package.json, Cargo.toml, и т.д.)\\n"; \
+		printf "\\n"; \
+		$(call log-warning,Технологии не найдены в модуле); \
+		$(call log-info,Создайте маркерные файлы (package.json, Cargo.toml, и т.д.)); \
 	fi
   endif
 endif

@@ -12,48 +12,49 @@ TEST_LOG := $(TEST_DIR)/test-results.log
 
 # Функция запуска теста
 define run-test
-	printf "$(COLOR_SECTION)▶ Тест: $(1)$(COLOR_RESET)\n"; \
+	$(call log-info,Тест: $(1):); \
 	if $(2); then \
-		printf "  $(COLOR_SUCCESS)✓ PASSED$(COLOR_RESET)\n"; \
+  	    $(call log-success,Тест успешно пройден); \
 	else \
-		printf "  $(COLOR_ERROR)✗ FAILED$(COLOR_RESET)\n"; \
+		$(call log-error,ОШИБКА! Тест провален); \
 		exit 1; \
 	fi
 endef
 
 devenv-test-internal:
-	@$(call log-section,Запуск автотестов DevContainer Workspace)
-	@printf "\n"
+	@$(call log-section,Подготовка тестового окружения)
 
 	@# Остановка контейнера если запущен
-	@$(call log-info,Очистка предыдущего окружения...)
-	@if $(CONTAINER_RUNTIME) ps --format "{{.Names}}" | grep -q "^$(CONTAINER_NAME)$$" 2>/dev/null; then \
-		$(MAKE) down; \
-	fi
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Окружение очищено\n\n"
-
-	@# Запуск контейнера перед диагностикой (без вывода)
-	@$(call log-info,Запуск контейнера для диагностики...)
-	@$(MAKE) up >/dev/null 2>&1
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер запущен\n\n"
-
-	@# Диагностика окружения перед запуском тестов
-	@$(call log-section,Диагностика тестового окружения)
+	@$(MAKE) down
+	@$(call log-success,Окружение очищено)
 	@printf "\n"
 
-	@# HOST ENVIRONMENT table
-	@$(MAKE) exec '(echo "UID,$(HOST_UID)"; echo "GID,$(HOST_GID)"; echo "CONTAINER_RUNTIME,$(CONTAINER_RUNTIME)") | /usr/bin/gum table --print --border thick --border.foreground 63 --widths 20,40 --columns "Parameter,Value"'
+	@# Запуск контейнера перед диагностикой (без вывода)
+	@$(call log-spinner,Запуск контейнера для диагностики,$(MAKE) up >/dev/null 2>&1)
+	@$(call log-success,Контейнер запущен)
+	@printf "\n"
 
-	@# CONTAINER ENVIRONMENT table
-	@$(MAKE) exec '(echo "UID,$$(id -u)"; echo "GID,$$(id -g)"; echo "USER,$$(whoami)"; echo "CWD,$$(pwd)") | /usr/bin/gum table --print --border thick --border.foreground 135 --widths 20,40 --columns "Parameter,Value"'
+	@# CONTAINER ENVIRONMENT
+	@$(call log-info,Контейнерная среда:)
+	@$(CONTAINER_RUNTIME) exec -w $(CONTAINER_WORKDIR) $(CONTAINER_NAME) bash -c 'U=$$(id -u); G=$$(id -g); USR=$$(whoami); D=$$(pwd); printf "UID|%s;GID|%s;USER|%s;CWD|%s\n" "$$U" "$$G" "$$USR" "$$D"' | sed 's/|/<COL>/g; s/;/<ROW>/g' | { $(call print-table,18); }
+	@printf "\n"
 
+	@# HOST ENVIRONMENT
+	@$(call log-info,Хост среда:)
+	@printf "UID<COL>$(HOST_UID)<ROW>GID<COL>$(HOST_GID)<ROW>CONTAINER_RUNTIME<COL>$(CONTAINER_RUNTIME)\n" | { $(call print-table,18); }
 	@printf "\n"
 
 	@# Подготовка изолированного тестового окружения - ВСЁ из контейнера
-	@$(call log-info,Подготовка тестового окружения...)
-	@$(MAKE) exec "mkdir -p $(TEST_DIR)/modules && cp Makefile $(TEST_DIR)/ && cp -r makefiles $(TEST_DIR)/ && cp -r .devcontainer $(TEST_DIR)/"
-	@$(MAKE) exec "echo '=== Test Run: \$$(date) ===' > $(TEST_DIR)/test-results.log"
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Окружение подготовлено\n\n"
+	@printf "⠙ Подготовка изолированной копии шаблона для тестирования...\n"
+	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
+		rm -rf $(TEST_DIR) && mkdir -p $(TEST_DIR)/modules && cp Makefile $(TEST_DIR)/ && cp -r makefiles $(TEST_DIR)/ && cp -r .devcontainer $(TEST_DIR)/ >/dev/null 2>&1; \
+		echo "=== Test Run: $$(date) ===" > $(TEST_DIR)/test-results.log; \
+	else \
+		$(CONTAINER_RUNTIME) exec -w $(CONTAINER_WORKDIR) $(CONTAINER_NAME) bash -c "rm -rf $(TEST_DIR) && mkdir -p $(TEST_DIR)/modules && cp Makefile $(TEST_DIR)/ && cp -r makefiles $(TEST_DIR)/ && cp -r .devcontainer $(TEST_DIR)/" >/dev/null 2>&1; \
+		$(CONTAINER_RUNTIME) exec -w $(CONTAINER_WORKDIR) $(CONTAINER_NAME) bash -c "echo '=== Test Run: \$$(date) ===' > $(TEST_DIR)/test-results.log"; \
+	fi
+	@$(call log-success,Копия шаблона подготовлена)
+	@printf "\n"
 
 	@# Подготовка тестовых модулей
 	@$(MAKE) setup-test-modules
@@ -65,50 +66,39 @@ devenv-test-internal:
 
 	@# Остановка тестового контейнера
 	@printf "\n"
-	@$(call log-info,Остановка тестового контейнера...)
-	@$(MAKE) down >/dev/null 2>&1
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Тестовый контейнер остановлен\n"
+	@$(call log-spinner,Остановка тестового контейнера,$(MAKE) down >/dev/null 2>&1)
+	@$(call log-success,Тестовый контейнер остановлен)
 	@printf "\n"
 
 	@# Итоговая информация
-	@printf "$(COLOR_SUCCESS)✓ ВСЕ ТЕСТЫ ПРОЙДЕНЫ!$(COLOR_RESET)\n"
+	@$(call log-success,ВСЕ ТЕСТЫ ПРОЙДЕНЫ!)
 	@printf "\n"
-	@printf "Тестовое окружение (внутри контейнера):\n"
-	@printf "  Директория: $(TEST_DIR)/\n"
-	@printf "  Журнал:     $(TEST_DIR)/test-results.log\n"
-	@printf "  Модули:     $(TEST_DIR)/modules/\n"
+	@$(call log-info,Тестовое окружение (внутри контейнера):)
+	@printf "Каталог<COL>$(TEST_DIR)/<ROW>Модули<COL>$(TEST_DIR)/modules/<ROW>Журнал<COL>$(TEST_DIR)/test-results.log\n" | { $(call print-table,16); }
 	@printf "\n"
-	@printf "$(COLOR_INFO)Артефакты в /tmp автоматически очистятся при перезагрузке$(COLOR_RESET)\n"
+	@$(call log-info,Артефакты в /tmp автоматически очистятся при перезагрузке)
 
 # Подготовка тестовых модулей
 setup-test-modules:
-	@$(call log-info,Создание тестовых модулей...)
+	@$(call log-section,Создание модулей пакетными менеджерами)
 
 	@# Node.js модуль (Bun)
-	@printf "  → test-nodejs (bun)...\n"
 	@$(MAKE) module MODULE_STACK=nodejs MODULE_TYPE=bun MODULE_NAME=test-nodejs MODULE_TARGET=$(TEST_DIR)/modules
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-nodejs создан\n"
 
 	@# PHP модуль (Composer)
-	@printf "  → test-php (composer)...\n"
 	@$(MAKE) module MODULE_STACK=php MODULE_TYPE=composer-lib MODULE_NAME=test-php MODULE_TARGET=$(TEST_DIR)/modules
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-php создан\n"
 
 	@# Python модуль (Poetry)
-	@printf "  → test-python (poetry)...\n"
 	@$(MAKE) module MODULE_STACK=python MODULE_TYPE=poetry MODULE_NAME=test-python MODULE_TARGET=$(TEST_DIR)/modules
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-python создан\n"
 
 	@# Rust модуль (Binary)
-	@printf "  → test-rust (cargo)...\n"
 	@$(MAKE) module MODULE_STACK=rust MODULE_TYPE=bin MODULE_NAME=test-rust MODULE_TARGET=$(TEST_DIR)/modules
-	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) test-rust создан\n"
 	@printf "\n"
 
 # Тест базовых команд
 .PHONY: test-commands-internal
 test-commands-internal:
-	@printf "$(COLOR_INFO)═══ Тестирование базовых команд ═══$(COLOR_RESET)\n"
+	@$(call log-section,Тестирование базовых команд)
 
 	@# Тест: make up
 	@$(call run-test,make up, \
@@ -130,7 +120,8 @@ test-commands-internal:
 # Тест прав доступа к файлам
 .PHONY: test-permissions-internal
 test-permissions-internal:
-	@printf "\n$(COLOR_INFO)═══ Тестирование прав доступа ═══$(COLOR_RESET)\n"
+	@printf "\n"
+	@$(call log-section,Тестирование прав доступа)
 
 	@# Создать файл в контейнере
 	@$(call run-test,Создание файла в контейнере, \
@@ -151,7 +142,8 @@ test-permissions-internal:
 # Тест технологических стеков
 .PHONY: test-stacks-internal
 test-stacks-internal:
-	@printf "\n$(COLOR_INFO)═══ Тестирование команд внутри модулей в контейнере ═══$(COLOR_RESET)\n"
+	@printf "\n"
+	@$(call log-section,Тестирование команд внутри модулей в контейнере)
 	@$(MAKE) test-stack-nodejs-internal
 	@$(MAKE) test-stack-php-internal
 	@$(MAKE) test-stack-python-internal
