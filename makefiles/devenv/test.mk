@@ -5,6 +5,7 @@
 .PHONY: devenv-test-internal setup-test-modules
 
 # Директория для тестовых артефактов
+# Используем /tmp для CI окружения чтобы избежать проблем с правами
 TEST_DIR := .test-workspace
 TEST_LOG := $(WORKSPACE_ROOT)/$(TEST_DIR)/test-results.log
 
@@ -44,8 +45,7 @@ devenv-test-internal:
 	@$(MAKE) exec "printf '  $(COLOR_INFO)→ CONTAINER: UID=\$$(id -u) GID=\$$(id -g) USER=\$$(whoami)$(COLOR_RESET)\n'"
 	@$(MAKE) exec "printf '  $(COLOR_INFO)→ CWD: \$$(pwd) (owner: \$$(stat -c '%u:%g' .))$(COLOR_RESET)\n'"
 	@$(MAKE) exec "printf '  $(COLOR_INFO)→ CWD permissions: \$$(stat -c '%a %A' .)$(COLOR_RESET)\n'"
-	@# Исправление прав доступа для CI окружения (GitHub Actions использует 755 вместо 775)
-	@$(MAKE) exec "chmod 775 ."
+	@# chmod не нужен - владелец (UID) уже имеет права rwx в 755
 	@$(MAKE) exec "mkdir -p $(TEST_DIR)/modules && cp Makefile $(TEST_DIR)/ && cp -r makefiles $(TEST_DIR)/ && cp -r .devcontainer $(TEST_DIR)/"
 	@$(MAKE) exec "echo '=== Test Run: \$$(date) ===' > $(TEST_DIR)/test-results.log"
 	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Окружение подготовлено\n\n"
