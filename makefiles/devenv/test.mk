@@ -40,14 +40,23 @@ devenv-test-internal:
 	@# Подготовка изолированного тестового окружения - ВСЁ из контейнера
 	@# make exec сам запустит контейнер через ensure-container-running
 	@$(call log-info,Подготовка тестового окружения...)
-	@# Диагностика: вывод информации о UID/GID
+	@# Расширенная диагностика контейнера
 	@printf "  $(COLOR_INFO)→ HOST: UID=$(HOST_UID) GID=$(HOST_GID) WORKSPACE_ROOT=$(WORKSPACE_ROOT)$(COLOR_RESET)\n"
-	@$(MAKE) exec "printf '  $(COLOR_INFO)→ CONTAINER: UID=\$$(id -u) GID=\$$(id -g) USER=\$$(whoami)$(COLOR_RESET)\n'"
-	@$(MAKE) exec "printf '  $(COLOR_INFO)→ CWD: \$$(pwd) (owner: \$$(stat -c '%u:%g' .))$(COLOR_RESET)\n'"
-	@$(MAKE) exec "printf '  $(COLOR_INFO)→ CWD permissions: \$$(stat -c '%a %A' .)$(COLOR_RESET)\n'"
-	@$(MAKE) exec "printf '  $(COLOR_INFO)→ /workspace exists: \$$([ -d /workspace ] && echo YES || echo NO)$(COLOR_RESET)\n'"
-	@$(MAKE) exec "printf '  $(COLOR_INFO)→ /workspace owner: \$$(stat -c '%u:%g' /workspace 2>/dev/null || echo N/A)$(COLOR_RESET)\n'"
-	@# chmod не нужен - владелец (UID) уже имеет права rwx в 755
+	@printf "  $(COLOR_INFO)→ ДИАГНОСТИКА КОНТЕЙНЕРА:$(COLOR_RESET)\n"
+	@printf "    "
+	@$(MAKE) exec "printf 'UID=\$$(id -u) GID=\$$(id -g) USER=\$$(whoami)\n'"
+	@printf "    CWD: "
+	@$(MAKE) exec pwd
+	@printf "    Files: "
+	@$(MAKE) exec "ls -la | head -5 | tail -3"
+	@printf "    Mount: "
+	@$(MAKE) exec "mount | grep workspace || echo 'No workspace mount'"
+	@printf "    /tmp write: "
+	@$(MAKE) exec "mkdir -p /tmp/test-ci && echo OK || echo FAIL"
+	@printf "    CWD write: "
+	@$(MAKE) exec "mkdir -p .test-ci-probe && echo OK || echo FAIL"
+	@printf "    CWD stat: "
+	@$(MAKE) exec "stat -c 'uid=%u gid=%g mode=%a' . 2>/dev/null || echo N/A"
 	@$(MAKE) exec "mkdir -p $(TEST_DIR)/modules && cp Makefile $(TEST_DIR)/ && cp -r makefiles $(TEST_DIR)/ && cp -r .devcontainer $(TEST_DIR)/"
 	@$(MAKE) exec "echo '=== Test Run: \$$(date) ===' > $(TEST_DIR)/test-results.log"
 	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Окружение подготовлено\n\n"
