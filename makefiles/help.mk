@@ -12,10 +12,10 @@ help:
 	@printf "$(COLOR_INFO)Среда разработки:$(COLOR_RESET)\n"
 	@$(call print-commands-table,"^## (down|exec|sh|up|version):")
 	@$(call devenv-help)
+	@printf "  $(COLOR_SUCCESS)make %-16s$(COLOR_RESET) Создать новый модуль (Node.js, PHP, Python, Rust)\n" "module"
 
 	@# Секция: Модули проекта
 	@printf "\n$(COLOR_INFO)Модули проекта:$(COLOR_RESET)\n"
-	@printf "  $(COLOR_SUCCESS)make %-17s$(COLOR_RESET) Создать новый модуль (Node.js, PHP, Python, Rust)\n" "module"
 	@if [ -n "$(MODULE_NAMES)" ]; then \
 		for module in $(MODULE_NAMES); do \
 			module_path="$(MODULES_DIR)/$$module"; \
