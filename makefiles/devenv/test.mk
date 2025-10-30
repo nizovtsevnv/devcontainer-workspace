@@ -32,35 +32,21 @@ devenv-test-internal:
 	fi
 	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Окружение очищено\n\n"
 
+	@# Запуск контейнера перед диагностикой (без вывода)
+	@$(call log-info,Запуск контейнера для диагностики...)
+	@$(MAKE) up >/dev/null 2>&1
+	@printf "  $(COLOR_SUCCESS)✓$(COLOR_RESET) Контейнер запущен\n\n"
+
 	@# Диагностика окружения перед запуском тестов
 	@$(call log-section,Диагностика тестового окружения)
 	@printf "\n"
-	@printf "$(COLOR_INFO)┌─────────────────────────────────────────────────────────────────┐$(COLOR_RESET)\n"
-	@printf "$(COLOR_INFO)│$(COLOR_RESET) $(COLOR_SUCCESS)HOST ENVIRONMENT$(COLOR_RESET)                                            $(COLOR_INFO)│$(COLOR_RESET)\n"
-	@printf "$(COLOR_INFO)├─────────────────────────────────────────────────────────────────┤$(COLOR_RESET)\n"
-	@printf "$(COLOR_INFO)│$(COLOR_RESET)   UID:              %-40s$(COLOR_INFO)│$(COLOR_RESET)\n" "$(HOST_UID)"
-	@printf "$(COLOR_INFO)│$(COLOR_RESET)   GID:              %-40s$(COLOR_INFO)│$(COLOR_RESET)\n" "$(HOST_GID)"
-	@printf "$(COLOR_INFO)│$(COLOR_RESET)   WORKSPACE_ROOT:   %-40s$(COLOR_INFO)│$(COLOR_RESET)\n" "$(WORKSPACE_ROOT)"
-	@printf "$(COLOR_INFO)└─────────────────────────────────────────────────────────────────┘$(COLOR_RESET)\n"
-	@printf "\n"
-	@printf "$(COLOR_INFO)┌─────────────────────────────────────────────────────────────────┐$(COLOR_RESET)\n"
-	@printf "$(COLOR_INFO)│$(COLOR_RESET) $(COLOR_SUCCESS)CONTAINER ENVIRONMENT$(COLOR_RESET)                                       $(COLOR_INFO)│$(COLOR_RESET)\n"
-	@printf "$(COLOR_INFO)├─────────────────────────────────────────────────────────────────┤$(COLOR_RESET)\n"
-	@printf "$(COLOR_INFO)│$(COLOR_RESET)   UID:              "
-	@$(MAKE) exec "printf '%-40s\n' \"\$$(id -u)\""
-	@printf "$(COLOR_INFO)│$(COLOR_RESET)   GID:              "
-	@$(MAKE) exec "printf '%-40s\n' \"\$$(id -g)\""
-	@printf "$(COLOR_INFO)│$(COLOR_RESET)   USER:             "
-	@$(MAKE) exec "printf '%-40s\n' \"\$$(whoami)\""
-	@printf "$(COLOR_INFO)│$(COLOR_RESET)   CWD:              "
-	@$(MAKE) exec "printf '%-40s\n' \"\$$(pwd)\""
-	@printf "$(COLOR_INFO)│$(COLOR_RESET)   /workspace mount: "
-	@$(MAKE) exec "mount | grep workspace | awk '{print \$$1}' | head -c 40 || printf '%-40s' 'N/A'"
-	@printf "\n"
-	@printf "$(COLOR_INFO)│$(COLOR_RESET)   /tmp writable:    "
-	@$(MAKE) exec "mkdir -p /tmp/test-probe >/dev/null 2>&1 && printf '%-40s' 'YES' || printf '%-40s' 'NO'"
-	@printf "\n"
-	@printf "$(COLOR_INFO)└─────────────────────────────────────────────────────────────────┘$(COLOR_RESET)\n"
+
+	@# HOST ENVIRONMENT table
+	@$(MAKE) exec '(echo "UID,$(HOST_UID)"; echo "GID,$(HOST_GID)"; echo "CONTAINER_RUNTIME,$(CONTAINER_RUNTIME)") | /usr/bin/gum table --print --border thick --border.foreground 63 --widths 20,40 --columns "Parameter,Value"'
+
+	@# CONTAINER ENVIRONMENT table
+	@$(MAKE) exec '(echo "UID,$$(id -u)"; echo "GID,$$(id -g)"; echo "USER,$$(whoami)"; echo "CWD,$$(pwd)") | /usr/bin/gum table --print --border thick --border.foreground 135 --widths 20,40 --columns "Parameter,Value"'
+
 	@printf "\n"
 
 	@# Подготовка изолированного тестового окружения - ВСЁ из контейнера
