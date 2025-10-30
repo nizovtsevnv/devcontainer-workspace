@@ -26,7 +26,7 @@ else
 				--name $(CONTAINER_NAME) \
 				--userns=keep-id:uid=$(HOST_UID),gid=$(HOST_GID) \
 				--network=host \
-				-v "$(WORKSPACE_ROOT):$(CONTAINER_WORKDIR):Z" \
+				-v "$(WORKSPACE_ROOT):$(CONTAINER_WORKDIR)" \
 				-w $(CONTAINER_WORKDIR) \
 				-e INSIDE_DEVCONTAINER=1 \
 				-e USER=developer \
@@ -93,7 +93,7 @@ exec:
 	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
 		bash -c "$$COMMAND"; \
 	else \
-		$(CONTAINER_RUNTIME) exec $(CONTAINER_NAME) bash -c "cd $(CONTAINER_WORKDIR) && $$COMMAND"; \
+		$(CONTAINER_RUNTIME) exec -w $(CONTAINER_WORKDIR) $(CONTAINER_NAME) bash -c "$$COMMAND"; \
 	fi
 
 ## version: Вывод версий инструментов DevContainer и модулей

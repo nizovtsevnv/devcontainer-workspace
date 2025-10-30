@@ -41,10 +41,12 @@ devenv-test-internal:
 	@# make exec сам запустит контейнер через ensure-container-running
 	@$(call log-info,Подготовка тестового окружения...)
 	@# Диагностика: вывод информации о UID/GID
-	@printf "  $(COLOR_INFO)→ HOST: UID=$(HOST_UID) GID=$(HOST_GID)$(COLOR_RESET)\n"
+	@printf "  $(COLOR_INFO)→ HOST: UID=$(HOST_UID) GID=$(HOST_GID) WORKSPACE_ROOT=$(WORKSPACE_ROOT)$(COLOR_RESET)\n"
 	@$(MAKE) exec "printf '  $(COLOR_INFO)→ CONTAINER: UID=\$$(id -u) GID=\$$(id -g) USER=\$$(whoami)$(COLOR_RESET)\n'"
 	@$(MAKE) exec "printf '  $(COLOR_INFO)→ CWD: \$$(pwd) (owner: \$$(stat -c '%u:%g' .))$(COLOR_RESET)\n'"
 	@$(MAKE) exec "printf '  $(COLOR_INFO)→ CWD permissions: \$$(stat -c '%a %A' .)$(COLOR_RESET)\n'"
+	@$(MAKE) exec "printf '  $(COLOR_INFO)→ /workspace exists: \$$([ -d /workspace ] && echo YES || echo NO)$(COLOR_RESET)\n'"
+	@$(MAKE) exec "printf '  $(COLOR_INFO)→ /workspace owner: \$$(stat -c '%u:%g' /workspace 2>/dev/null || echo N/A)$(COLOR_RESET)\n'"
 	@# chmod не нужен - владелец (UID) уже имеет права rwx в 755
 	@$(MAKE) exec "mkdir -p $(TEST_DIR)/modules && cp Makefile $(TEST_DIR)/ && cp -r makefiles $(TEST_DIR)/ && cp -r .devcontainer $(TEST_DIR)/"
 	@$(MAKE) exec "echo '=== Test Run: \$$(date) ===' > $(TEST_DIR)/test-results.log"
