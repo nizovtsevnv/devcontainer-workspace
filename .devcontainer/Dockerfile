@@ -152,7 +152,7 @@ RUN python3 -m pip install --break-system-packages \
 
 # Установка uv (современный быстрый пакетный менеджер для Python)
 # Устанавливается от root в системную директорию для быстрого ID-mapping в Podman
-RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local sh
+RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
 
 # ===================================
 # Создание непривилегированного пользователя

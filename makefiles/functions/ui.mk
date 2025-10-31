@@ -124,7 +124,8 @@ define ask-confirm
 		fi; \
 	else \
 		$(call ensure-devenv-ready); \
-		if ! $(MAKE) exec-interactive "gum confirm '$(1)?' --negative"; then \
+		MESSAGE='$(1)'; \
+		if ! $(MAKE) exec-interactive "gum confirm \"$$MESSAGE?\" --negative"; then \
 			printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; \
 			exit 0; \
 		fi; \
@@ -141,7 +142,8 @@ define ask-confirm-default-yes
 		fi; \
 	else \
 		$(call ensure-devenv-ready); \
-		if ! $(MAKE) exec-interactive "gum confirm '$(1)?' --default --negative"; then \
+		MESSAGE='$(1)'; \
+		if ! $(MAKE) exec-interactive "gum confirm \"$$MESSAGE?\" --default --negative"; then \
 			printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; \
 			exit 0; \
 		fi; \
