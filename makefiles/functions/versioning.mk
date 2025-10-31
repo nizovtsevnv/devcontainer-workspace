@@ -19,9 +19,9 @@ $(shell \
 endef
 
 # Получить последний семантический тег (vX.Y.Z)
-# Использование: LATEST_TAG=$(call get-latest-semantic-tag)
+# Использование: LATEST_TAG=$$($(call get-latest-semantic-tag))
 define get-latest-semantic-tag
-$(shell git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | tail -1)
+git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | tail -1
 endef
 
 # Получить все семантические теги (vX.Y.Z)
