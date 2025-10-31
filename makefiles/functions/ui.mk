@@ -118,9 +118,18 @@ endef
 # Использование: $(call ask-confirm,message)
 define ask-confirm
 	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
-		if ! gum confirm "$(1)?"; then \
-			gum style --foreground 36 "ℹ INFO: Отменено"; \
-			exit 0; \
+		if command -v gum >/dev/null 2>&1; then \
+			if ! gum confirm "$(1)?"; then \
+				gum style --foreground 36 "ℹ INFO: Отменено"; \
+				exit 0; \
+			fi; \
+		else \
+			printf "$(1)? [y/N]: "; \
+			read -r answer; \
+			case "$$answer" in \
+				[Yy]|[Yy][Ee][Ss]) ;; \
+				*) printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; exit 0 ;; \
+			esac; \
 		fi; \
 	else \
 		$(call ensure-devenv-ready); \
@@ -136,9 +145,18 @@ endef
 # Использование: $(call ask-confirm-default-yes,message)
 define ask-confirm-default-yes
 	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
-		if ! gum confirm "$(1)?" --default; then \
-			gum style --foreground 36 "ℹ INFO: Отменено"; \
-			exit 0; \
+		if command -v gum >/dev/null 2>&1; then \
+			if ! gum confirm "$(1)?" --default; then \
+				gum style --foreground 36 "ℹ INFO: Отменено"; \
+				exit 0; \
+			fi; \
+		else \
+			printf "$(1)? [Y/n]: "; \
+			read -r answer; \
+			case "$$answer" in \
+				[Nn]|[Nn][Oo]) printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; exit 0 ;; \
+				*) ;; \
+			esac; \
 		fi; \
 	else \
 		$(call ensure-devenv-ready); \
