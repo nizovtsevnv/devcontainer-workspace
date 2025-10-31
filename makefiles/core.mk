@@ -59,14 +59,23 @@ ifeq ($(IS_INSIDE_CONTAINER),0)
 	@$(call log-warning,Нельзя остановить контейнер изнутри)
 else
 	@if $(CONTAINER_RUNTIME) ps --format "{{.Names}}" | grep -q "^$(CONTAINER_NAME)$$"; then \
-		$(call log-info,Остановка контейнера ($(CONTAINER_NAME))...); \
-		$(CONTAINER_RUNTIME) stop $(CONTAINER_NAME) >/dev/null 2>&1; \
-		$(CONTAINER_RUNTIME) rm $(CONTAINER_NAME) >/dev/null 2>&1; \
+		if command -v gum >/dev/null 2>&1; then \
+			gum spin --spinner dot --title "Остановка контейнера ($(CONTAINER_NAME))" -- sh -c '$(CONTAINER_RUNTIME) stop $(CONTAINER_NAME) >/dev/null 2>&1 && $(CONTAINER_RUNTIME) rm $(CONTAINER_NAME) >/dev/null 2>&1'; \
+		else \
+			printf "⠙ Остановка контейнера ($(CONTAINER_NAME))...\n"; \
+			$(CONTAINER_RUNTIME) stop $(CONTAINER_NAME) >/dev/null 2>&1; \
+			$(CONTAINER_RUNTIME) rm $(CONTAINER_NAME) >/dev/null 2>&1; \
+		fi; \
 		$(call log-success,Контейнер остановлен); \
 	else \
 		$(call log-info,Контейнер уже остановлен); \
 	fi
 endif
+# ВАЖНО: Здесь НЕ используется log-spinner, потому что:
+# 1. При отсутствии gum на хосте log-spinner использует gum из контейнера
+# 2. Это приводит к выполнению команд stop/rm ВНУТРИ контейнера (не работает)
+# 3. Команды stop/rm должны выполняться на ХОСТЕ
+# 4. Поэтому используем прямую проверку gum на хосте с fallback на статический спиннер
 
 ## sh: Интерактивный shell в DevContainer
 sh:
