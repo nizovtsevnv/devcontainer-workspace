@@ -117,7 +117,7 @@ endef
 # Запрос подтверждения с использованием gum (дефолт: NO)
 # Использование: $(call ask-confirm,message)
 define ask-confirm
-	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
+	if [ "$(IS_INSIDE_CONTAINER)" = "1" ]; then \
 		if command -v gum >/dev/null 2>&1; then \
 			if ! gum confirm "$(1)?"; then \
 				gum style --foreground 36 "ℹ INFO: Отменено"; \
@@ -132,11 +132,11 @@ define ask-confirm
 			esac; \
 		fi; \
 	else \
-		$(call ensure-devenv-ready); \
-		export CONFIRM_MESSAGE='$(1)'; \
-		if ! $(CONTAINER_RUNTIME) exec -it -w $(CONTAINER_WORKDIR) -e CONFIRM_MESSAGE $(CONTAINER_NAME) bash -c 'gum confirm "$$CONFIRM_MESSAGE?"'; then \
-			printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; \
-			exit 0; \
+		if command -v gum >/dev/null 2>&1; then \
+			if ! gum confirm "$(1)?"; then \
+				gum style --foreground 36 "ℹ INFO: Отменено"; \
+				exit 0; \
+			fi; \
 		fi; \
 	fi
 endef
@@ -144,7 +144,7 @@ endef
 # Запрос подтверждения с использованием gum (дефолт: YES)
 # Использование: $(call ask-confirm-default-yes,message)
 define ask-confirm-default-yes
-	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
+	if [ "$(IS_INSIDE_CONTAINER)" = "1" ]; then \
 		if command -v gum >/dev/null 2>&1; then \
 			if ! gum confirm "$(1)?" --default; then \
 				gum style --foreground 36 "ℹ INFO: Отменено"; \
@@ -159,11 +159,11 @@ define ask-confirm-default-yes
 			esac; \
 		fi; \
 	else \
-		$(call ensure-devenv-ready); \
-		export CONFIRM_MESSAGE='$(1)'; \
-		if ! $(CONTAINER_RUNTIME) exec -it -w $(CONTAINER_WORKDIR) -e CONFIRM_MESSAGE $(CONTAINER_NAME) bash -c 'gum confirm "$$CONFIRM_MESSAGE?" --default'; then \
-			printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; \
-			exit 0; \
+		if command -v gum >/dev/null 2>&1; then \
+			if ! gum confirm "$(1)?" --default; then \
+				gum style --foreground 36 "ℹ INFO: Отменено"; \
+				exit 0; \
+			fi; \
 		fi; \
 	fi
 endef
