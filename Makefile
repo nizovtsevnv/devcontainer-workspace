@@ -16,9 +16,12 @@
 MAKEFLAGS += --no-print-directory
 
 # Подключение модулей в правильном порядке
-# Порядок важен: сначала config, потom functions, detect, остальные - в любом порядке
+# Порядок важен: сначала config, потом functions (все), detect, остальные - в любом порядке
 include makefiles/config.mk
-include makefiles/functions.mk
+include makefiles/functions/ui.mk
+include makefiles/functions/versioning.mk
+include makefiles/functions/template.mk
+include makefiles/functions/container.mk
 include makefiles/modules/detect.mk
 include makefiles/core.mk
 include makefiles/modules/commands.mk
