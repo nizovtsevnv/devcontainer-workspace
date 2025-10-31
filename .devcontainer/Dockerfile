@@ -142,9 +142,6 @@ RUN python3 -m pip install --break-system-packages \
   poetry \
   pipenv
 
-# Установка uv (современный быстрый пакетный менеджер для Python)
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-
 # Глобальные Python инструменты для контроля единых стандартов качества workspace
 RUN python3 -m pip install --break-system-packages \
   black \
@@ -221,6 +218,12 @@ RUN --mount=type=cache,target=/home/${USERNAME}/.cargo/registry,uid=${CONTAINER_
     --mount=type=cache,target=/home/${USERNAME}/.cargo/git,uid=${CONTAINER_UID},gid=${CONTAINER_GID} \
     . $HOME/.cargo/env \
     && cargo install cargo-watch cargo-edit cargo-outdated
+
+# ===================================
+# Python пакетные менеджеры для пользователя
+# ===================================
+# Установка uv (современный быстрый пакетный менеджер для Python)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # ===================================
 # Настройка окружения и PATH
