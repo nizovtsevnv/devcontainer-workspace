@@ -45,12 +45,8 @@ devenv-update-project:
 	\
 	ALL_TAGS=$$($(call get-all-semantic-tags)); \
 	VERSION_OPTIONS=$$(echo "$$ALL_TAGS" | sed 's/^v//g' | tac | tr '\n' ' '); \
-	if command -v gum >/dev/null 2>&1; then \
-		SELECTED=$$(echo "$$VERSION_OPTIONS" | tr ' ' '\n' | gum choose --header "Выберите версию для обновления:" --selected="$$LATEST_VERSION_CLEAN"); \
-		TARGET_VERSION="$$SELECTED"; \
-	else \
-		TARGET_VERSION=$$($(call ask-input-with-default,$$LATEST_VERSION_CLEAN,Выберите версию)); \
-	fi; \
+	SELECTED=$$(echo "$$VERSION_OPTIONS" | tr ' ' '\n' | gum choose --header "Выберите версию для обновления:" --selected="$$LATEST_VERSION_CLEAN"); \
+	TARGET_VERSION="$$SELECTED"; \
 	\
 	HAS_PROJECT_GITHUB="no"; \
 	if [ -d .github ]; then \
@@ -98,11 +94,7 @@ devenv-update-project:
 	\
 	if $(call ask-confirm,Создать коммит обновления шаблона); then \
 		DEFAULT_MSG="chore: update devenv template to $$NEW_VERSION"; \
-		if command -v gum >/dev/null 2>&1; then \
-			COMMIT_MSG=$$(gum input --value "$$DEFAULT_MSG" --prompt "Сообщение коммита: " --width=80); \
-		else \
-			COMMIT_MSG=$$($(call ask-input-with-default,$$DEFAULT_MSG,Сообщение коммита)); \
-		fi; \
+		COMMIT_MSG=$$(gum input --value "$$DEFAULT_MSG" --prompt "Сообщение коммита: " --width=80); \
 		if [ -n "$$COMMIT_MSG" ]; then \
 			git commit -m "$$COMMIT_MSG" >/dev/null 2>&1; \
 			printf "\n"; \

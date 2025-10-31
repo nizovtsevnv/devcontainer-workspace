@@ -8,15 +8,30 @@ MODULE_STACK ?=
 MODULE_TYPE ?=
 MODULE_NAME ?=
 
-# Главная команда
+# Главная команда (запуск с хоста или изнутри контейнера)
 .PHONY: module
 module:
 	@$(call ensure-devenv-ready)
+	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
+		$(MAKE) module-interactive MODULE_STACK="$(MODULE_STACK)" MODULE_TYPE="$(MODULE_TYPE)" MODULE_NAME="$(MODULE_NAME)" MODULE_TARGET="$(MODULE_TARGET)"; \
+	else \
+		$(MAKE) exec-interactive "make module-interactive MODULE_STACK='$(MODULE_STACK)' MODULE_TYPE='$(MODULE_TYPE)' MODULE_NAME='$(MODULE_NAME)' MODULE_TARGET='$(MODULE_TARGET)'"; \
+	fi
+
+# Интерактивная команда (только для запуска внутри контейнера)
+.PHONY: module-interactive
+module-interactive:
 	@$(call log-info,Создание нового модуля:)
 
 	@# Выбор стека если не указан
 	@if [ -z "$(MODULE_STACK)" ]; then \
-		STACK=$$($(call ask-module-stack)); \
+		DISPLAY=$$(gum choose --header "Выберите стек:" "Node.js" "PHP" "Python" "Rust"); \
+		case "$$DISPLAY" in \
+			"Node.js") STACK="nodejs" ;; \
+			"PHP") STACK="php" ;; \
+			"Python") STACK="python" ;; \
+			"Rust") STACK="rust" ;; \
+		esac; \
 	else \
 		STACK="$(MODULE_STACK)"; \
 	fi; \
@@ -29,7 +44,10 @@ module:
 .PHONY: module-select-type-nodejs
 module-select-type-nodejs:
 	@if [ -z "$(MODULE_TYPE)" ]; then \
-		TYPE=$$($(call ask-module-type-nodejs)); \
+		SEL=$$(gum choose --header "Выберите тип Node.js проекта:" "Bun (TypeScript)" "npm (TypeScript)" "pnpm (TypeScript)" "yarn (TypeScript)" "Next.js (TypeScript + Tailwind)" "Expo (TypeScript)" "SvelteKit (TypeScript)"); \
+		case "$$SEL" in \
+			"Bun"*) TYPE="bun" ;; "npm"*) TYPE="npm" ;; "pnpm"*) TYPE="pnpm" ;; "yarn"*) TYPE="yarn" ;; "Next.js"*) TYPE="nextjs" ;; "Expo"*) TYPE="expo" ;; "SvelteKit"*) TYPE="svelte" ;; \
+		esac; \
 	else \
 		TYPE="$(MODULE_TYPE)"; \
 	fi; \
@@ -38,7 +56,10 @@ module-select-type-nodejs:
 .PHONY: module-select-type-php
 module-select-type-php:
 	@if [ -z "$(MODULE_TYPE)" ]; then \
-		TYPE=$$($(call ask-module-type-php)); \
+		SEL=$$(gum choose --header "Выберите тип PHP проекта:" "Composer library" "Composer project" "Laravel"); \
+		case "$$SEL" in \
+			"Composer library") TYPE="composer-lib" ;; "Composer project") TYPE="composer-project" ;; "Laravel") TYPE="laravel" ;; \
+		esac; \
 	else \
 		TYPE="$(MODULE_TYPE)"; \
 	fi; \
@@ -47,19 +68,30 @@ module-select-type-php:
 .PHONY: module-select-type-python
 module-select-type-python:
 	@if [ -z "$(MODULE_TYPE)" ]; then \
-		TYPE=$$($(call ask-module-type-python)); \
+		SEL=$$(gum choose --header "Выберите тип Python проекта:" "UV (быстрый, рекомендуется)" "Poetry"); \
+		case "$$SEL" in \
+			"UV"*) TYPE="uv" ;; \
+			"Poetry") TYPE="poetry" ;; \
+		esac; \
 	else \
 		TYPE="$(MODULE_TYPE)"; \
 	fi; \
+	\
 	$(MAKE) module-request-name STACK=python TYPE=$$TYPE
 
 .PHONY: module-select-type-rust
 module-select-type-rust:
 	@if [ -z "$(MODULE_TYPE)" ]; then \
-		TYPE=$$($(call ask-module-type-rust)); \
+		SEL=$$(gum choose --header "Выберите тип Rust проекта:" "Binary (приложение)" "Library (библиотека)" "Dioxus (веб-приложение)"); \
+		case "$$SEL" in \
+			"Binary"*) TYPE="bin" ;; \
+			"Library"*) TYPE="lib" ;; \
+			"Dioxus"*) TYPE="dioxus" ;; \
+		esac; \
 	else \
 		TYPE="$(MODULE_TYPE)"; \
 	fi; \
+	\
 	$(MAKE) module-request-name STACK=rust TYPE=$$TYPE
 
 # ===================================
@@ -69,14 +101,15 @@ module-select-type-rust:
 .PHONY: module-request-name
 module-request-name:
 	@if [ -z "$(MODULE_NAME)" ]; then \
-		NAME=$$($(call ask-module-name)); \
+		NAME=$$(gum input --prompt "Введите имя модуля: " --placeholder "example-module"); \
 		if [ -z "$$NAME" ]; then \
-			$(call log-error,Имя не может быть пустым); \
+			printf "$(COLOR_ERROR)✗ %s$(COLOR_RESET)\n" "Имя не может быть пустым" >&2; \
 			exit 1; \
 		fi; \
 	else \
 		NAME="$(MODULE_NAME)"; \
 	fi; \
+	\
 	$(MAKE) module-validate-and-create STACK=$(STACK) TYPE=$(TYPE) NAME=$$NAME
 
 # ===================================
@@ -87,27 +120,14 @@ module-request-name:
 module-validate-and-create:
 	@# Валидация имени (только буквы, цифры, дефис, underscore)
 	@if ! echo "$(NAME)" | grep -qE '^[a-zA-Z0-9_-]+$$'; then \
-		$(call log-error,Имя может содержать только буквы цифры дефис и underscore); \
+		printf "$(COLOR_ERROR)✗ %s$(COLOR_RESET)\n" "Имя может содержать только буквы цифры дефис и underscore" >&2; \
 		exit 1; \
 	fi
 
 	@# Проверка что модуль не существует
 	@if [ -d "$(MODULE_TARGET)/$(NAME)" ]; then \
-		$(call log-error,Модуль $(NAME) уже существует в $(MODULE_TARGET)/); \
+		printf "$(COLOR_ERROR)✗ %s$(COLOR_RESET)\n" "Модуль $(NAME) уже существует в $(MODULE_TARGET)/" >&2; \
 		exit 1; \
-	fi
-
-	@# Показать сводку и запросить подтверждение
-	@printf "\n"; \
-	$(call log-info,Будет создан модуль:); \
-	printf "  Стек:  $(STACK)\n"; \
-	printf "  Тип:   $(TYPE)\n"; \
-	printf "  Имя:   $(NAME)\n"; \
-	printf "  Путь:  $(MODULE_TARGET)/$(NAME)\n"; \
-	printf "\n"; \
-	if ! $(call ask-confirm,Создать модуль); then \
-		$(call log-info,Отменено пользователем); \
-		exit 0; \
 	fi
 
 	@# Создание директории если не существует (выполняется в контейнере для корректных прав)
