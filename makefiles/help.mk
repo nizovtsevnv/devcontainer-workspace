@@ -22,7 +22,7 @@ help:
 			printf "make devenv test<COL>Запустить автотесты (только для разработки)<ROW>"; \
 		fi; \
 		printf "make devenv update<COL>Обновить версию шаблона<ROW>"; \
-		printf "make devenv version<COL>Текущая и актуальная версия шаблона<ROW>"; \
+		printf "make devenv status<COL>Текущая и актуальная версия шаблона<ROW>"; \
 		printf "make module<COL>Создать новый модуль (Node.js, PHP, Python, Rust)"; \
 	} | { $(call print-table,20); }
 	@printf "\n"

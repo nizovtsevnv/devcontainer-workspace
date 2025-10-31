@@ -15,7 +15,16 @@ devenv-status-internal:
 		REMOTE="origin"; \
 	fi; \
 	\
-	CURRENT_VERSION="$(call get-template-version)"; \
+	CURRENT_VERSION=$$( \
+		set -o pipefail; \
+		if [ -f .template-version ]; then \
+			cat .template-version | sed 's/^v//'; \
+		else \
+			git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//' || \
+			git describe --tags 2>/dev/null | sed 's/^v//' || \
+			echo "unknown"; \
+		fi \
+	); \
 	if [ "$$STATUS" = "инициализирован" ]; then \
 		printf '%s\n' "Версия шаблона<COL>$$CURRENT_VERSION<ROW>Статус<COL>инициализирован" | { $(call print-table,16); }; \
 	else \
@@ -30,10 +39,11 @@ devenv-status-internal:
 	\
 	LATEST_TAG=$$(git ls-remote --tags $$REMOTE 2>/dev/null | grep -v '\^{}' | awk '{print $$2}' | sed 's|refs/tags/||' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$' | sort -V | tail -1); \
 	LATEST_TAG_CLEAN=$$(echo "$$LATEST_TAG" | sed 's/^v//'); \
+	CURRENT_VERSION_BASE=$$(echo "$$CURRENT_VERSION" | sed 's/-.*$$//'); \
 	if [ -f .template-version ] || git describe --tags --exact-match HEAD >/dev/null 2>&1; then \
 		VERSION_SUFFIX=""; \
 	else \
-		VERSION_SUFFIX=" (модифицированный)"; \
+		VERSION_SUFFIX=" (модифицирована)"; \
 	fi; \
 	\
 	if [ -z "$$LATEST_TAG" ]; then \
@@ -45,7 +55,7 @@ devenv-status-internal:
 		printf "\n  Обновить: "; \
 		$(call log-success,make devenv update); \
 		printf "\n"; \
-	elif [ "$$LATEST_TAG_CLEAN" = "$$CURRENT_VERSION" ]; then \
+	elif [ "$$LATEST_TAG_CLEAN" = "$$CURRENT_VERSION_BASE" ]; then \
 		if [ -n "$$VERSION_SUFFIX" ]; then \
 			$(call log-info,У вас актуальная версия$$VERSION_SUFFIX); \
 		else \
@@ -55,7 +65,7 @@ devenv-status-internal:
 		$(call log-warning,Доступна новая версия: $$LATEST_TAG_CLEAN); \
 		printf "\n"; \
 		$(call log-info,Changelog:); \
-		$(call show-changelog,$$CURRENT_VERSION,$$REMOTE/main); \
+		$(call show-changelog,$$CURRENT_VERSION_BASE,$$REMOTE/main); \
 		printf "\n  Обновить: "; \
 		$(call log-success,make devenv update); \
 		printf "\n"; \
