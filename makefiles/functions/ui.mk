@@ -121,21 +121,21 @@ define ask-confirm
 		if command -v gum >/dev/null 2>&1; then \
 			if ! gum confirm "$(1)?"; then \
 				gum style --foreground 36 "ℹ INFO: Отменено"; \
-				exit 0; \
+				exit 1; \
 			fi; \
 		else \
 			printf "$(1)? [y/N]: "; \
 			read -r answer; \
 			case "$$answer" in \
 				[Yy]|[Yy][Ee][Ss]) ;; \
-				*) printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; exit 0 ;; \
+				*) printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; exit 1 ;; \
 			esac; \
 		fi; \
 	else \
 		if command -v gum >/dev/null 2>&1; then \
 			if ! gum confirm "$(1)?"; then \
 				gum style --foreground 36 "ℹ INFO: Отменено"; \
-				exit 0; \
+				exit 1; \
 			fi; \
 		fi; \
 	fi
@@ -148,13 +148,13 @@ define ask-confirm-default-yes
 		if command -v gum >/dev/null 2>&1; then \
 			if ! gum confirm "$(1)?" --default; then \
 				gum style --foreground 36 "ℹ INFO: Отменено"; \
-				exit 0; \
+				exit 1; \
 			fi; \
 		else \
 			printf "$(1)? [Y/n]: "; \
 			read -r answer; \
 			case "$$answer" in \
-				[Nn]|[Nn][Oo]) printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; exit 0 ;; \
+				[Nn]|[Nn][Oo]) printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; exit 1 ;; \
 				*) ;; \
 			esac; \
 		fi; \
@@ -162,7 +162,7 @@ define ask-confirm-default-yes
 		if command -v gum >/dev/null 2>&1; then \
 			if ! gum confirm "$(1)?" --default; then \
 				gum style --foreground 36 "ℹ INFO: Отменено"; \
-				exit 0; \
+				exit 1; \
 			fi; \
 		fi; \
 	fi
