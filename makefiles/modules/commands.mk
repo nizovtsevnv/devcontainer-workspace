@@ -110,9 +110,9 @@ ifneq ($(filter $(FIRST_GOAL),$(MODULE_NAMES)),)
       .PHONY: $(MODULE_NAME)
       $(MODULE_NAME):
 	@if [ -z "$(PM_COMMAND)" ]; then \
-		$(call log-section,Модуль $(MODULE_NAME)\: $(PACKAGE_MANAGER) --help); \
+		$(call log-section,Модуль $(MODULE_NAME): $(PACKAGE_MANAGER) --help); \
 	else \
-		$(call log-section,Модуль $(MODULE_NAME)\: $(PACKAGE_MANAGER) $(PM_COMMAND)); \
+		$(call log-section,Модуль $(MODULE_NAME): $(PACKAGE_MANAGER) $(PM_COMMAND)); \
 	fi
 	@$(call ensure-devenv-ready)
 	@if [ -z "$(PM_COMMAND)" ]; then \
