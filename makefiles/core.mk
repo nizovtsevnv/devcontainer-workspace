@@ -96,6 +96,29 @@ exec:
 		$(CONTAINER_RUNTIME) exec -w $(CONTAINER_WORKDIR) $(CONTAINER_NAME) bash -c "$$COMMAND"; \
 	fi
 
+## exec-interactive: Выполнение интерактивной команды в DevContainer (с TTY)
+## Использование:
+##   make exec-interactive 'команда'
+##   CMD='команда' make exec-interactive
+.PHONY: exec-interactive
+exec-interactive:
+	@$(call ensure-devenv-ready)
+	@CMD_VALUE='$(CMD)'; \
+	if [ -n "$$CMD_VALUE" ]; then \
+		COMMAND="$$CMD_VALUE"; \
+	else \
+		COMMAND="$(filter-out exec-interactive,$(MAKECMDGOALS))"; \
+	fi; \
+	if [ -z "$$COMMAND" ]; then \
+		$(call log-error,Использование: make exec-interactive 'команда' или CMD='команда' make exec-interactive); \
+		exit 1; \
+	fi; \
+	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
+		bash -c "$$COMMAND"; \
+	else \
+		$(CONTAINER_RUNTIME) exec -it -w $(CONTAINER_WORKDIR) $(CONTAINER_NAME) bash -c "$$COMMAND"; \
+	fi
+
 ## version: Вывод версий инструментов DevContainer и модулей
 .PHONY: version core-version
 version: core-version
