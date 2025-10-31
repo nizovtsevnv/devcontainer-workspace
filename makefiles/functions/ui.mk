@@ -118,14 +118,14 @@ endef
 # Использование: $(call ask-confirm,message)
 define ask-confirm
 	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
-		if ! gum confirm "$(1)?" --negative; then \
+		if ! gum confirm "$(1)?"; then \
 			gum style --foreground 36 "ℹ INFO: Отменено"; \
 			exit 0; \
 		fi; \
 	else \
 		$(call ensure-devenv-ready); \
-		MESSAGE='$(1)'; \
-		if ! $(MAKE) exec-interactive "gum confirm \"$$MESSAGE?\" --negative"; then \
+		export CONFIRM_MESSAGE='$(1)'; \
+		if ! $(CONTAINER_RUNTIME) exec -it -w $(CONTAINER_WORKDIR) -e CONFIRM_MESSAGE $(CONTAINER_NAME) bash -c 'gum confirm "$$CONFIRM_MESSAGE?"'; then \
 			printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; \
 			exit 0; \
 		fi; \
@@ -136,14 +136,14 @@ endef
 # Использование: $(call ask-confirm-default-yes,message)
 define ask-confirm-default-yes
 	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
-		if ! gum confirm "$(1)?" --default --negative; then \
+		if ! gum confirm "$(1)?" --default; then \
 			gum style --foreground 36 "ℹ INFO: Отменено"; \
 			exit 0; \
 		fi; \
 	else \
 		$(call ensure-devenv-ready); \
-		MESSAGE='$(1)'; \
-		if ! $(MAKE) exec-interactive "gum confirm \"$$MESSAGE?\" --default --negative"; then \
+		export CONFIRM_MESSAGE='$(1)'; \
+		if ! $(CONTAINER_RUNTIME) exec -it -w $(CONTAINER_WORKDIR) -e CONFIRM_MESSAGE $(CONTAINER_NAME) bash -c 'gum confirm "$$CONFIRM_MESSAGE?" --default'; then \
 			printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; \
 			exit 0; \
 		fi; \
