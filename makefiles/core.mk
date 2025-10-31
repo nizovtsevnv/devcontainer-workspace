@@ -59,7 +59,9 @@ ifeq ($(IS_INSIDE_CONTAINER),0)
 	@$(call log-warning,Нельзя остановить контейнер изнутри)
 else
 	@if $(CONTAINER_RUNTIME) ps --format "{{.Names}}" | grep -q "^$(CONTAINER_NAME)$$"; then \
-		$(call log-spinner,Остановка контейнера ($(CONTAINER_NAME)),sh -c '$(CONTAINER_RUNTIME) stop $(CONTAINER_NAME) >/dev/null 2>&1 && $(CONTAINER_RUNTIME) rm $(CONTAINER_NAME) >/dev/null 2>&1'); \
+		$(call log-info,Остановка контейнера ($(CONTAINER_NAME))...); \
+		$(CONTAINER_RUNTIME) stop $(CONTAINER_NAME) >/dev/null 2>&1; \
+		$(CONTAINER_RUNTIME) rm $(CONTAINER_NAME) >/dev/null 2>&1; \
 		$(call log-success,Контейнер остановлен); \
 	else \
 		$(call log-info,Контейнер уже остановлен); \

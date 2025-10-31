@@ -151,8 +151,8 @@ RUN python3 -m pip install --break-system-packages \
   mypy
 
 # Установка uv (современный быстрый пакетный менеджер для Python)
-# Устанавливается от root для быстрого ID-mapping в Podman
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+# Устанавливается от root в системную директорию для быстрого ID-mapping в Podman
+RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local sh
 
 # ===================================
 # Создание непривилегированного пользователя
@@ -228,7 +228,7 @@ RUN --mount=type=cache,target=/home/${USERNAME}/.cargo/registry,uid=${CONTAINER_
 # ===================================
 RUN npm config set prefix "/home/$USERNAME/.npm-global"
 
-ENV PATH="/home/$USERNAME/.npm-global/bin:/home/$USERNAME/.cargo/bin:/home/$USERNAME/.composer/vendor/bin:/home/$USERNAME/.bun/bin:/root/.composer/vendor/bin:/root/.local/bin:/root/.cargo/bin:${PATH}"
+ENV PATH="/home/$USERNAME/.npm-global/bin:/home/$USERNAME/.cargo/bin:/home/$USERNAME/.composer/vendor/bin:/home/$USERNAME/.bun/bin:/root/.composer/vendor/bin:/root/.cargo/bin:${PATH}"
 
 # Настройка git для пользователя
 RUN git config --global init.defaultBranch main \
