@@ -19,7 +19,7 @@ define ensure-image-available
 	fi
 endef
 
-# Умный запуск контейнерной среды (с gum spin если доступен на хосте)
+# Умный запуск контейнерной среды
 # Использование: @$(call ensure-devenv-ready)
 define ensure-devenv-ready
 	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
@@ -33,7 +33,6 @@ endef
 
 # Остановить контейнер если запущен
 # Использование: @$(call stop-container-if-running)
-# ВАЖНО: Команды stop/rm должны выполняться на хосте, поэтому НЕ используем gum из контейнера
 define stop-container-if-running
 	if $(CONTAINER_RUNTIME) ps --format "{{.Names}}" 2>/dev/null | grep -q "^$(CONTAINER_NAME)$$"; then \
 		$(CONTAINER_RUNTIME) stop $(CONTAINER_NAME) >/dev/null 2>&1; \

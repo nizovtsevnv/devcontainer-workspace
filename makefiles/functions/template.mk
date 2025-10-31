@@ -81,34 +81,17 @@ endef
 # Использование: @$(call create-project-readme)
 define create-project-readme
 	printf "\n"; \
-	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
-		if gum confirm "Создать README.md проекта?" --default; then \
-			if [ -f "README.project.md" ]; then \
-				cp README.project.md README.md; \
-				gum style --foreground 2 "  ✓ README.md создан из шаблона"; \
-			else \
-				echo "# My Project" > README.md; \
-				echo "" >> README.md; \
-				echo "Проект создан из [DevContainer Workspace](https://github.com/nizovtsevnv/devcontainer-workspace)" >> README.md; \
-				gum style --foreground 2 "  ✓ README.md создан"; \
-			fi; \
+	if $(call ask-confirm-default-yes,Создать README.md проекта?); then \
+		if [ -f "README.project.md" ]; then \
+			cp README.project.md README.md; \
+			$(call log-success,README.md создан из шаблона); \
 		else \
-			gum style --foreground 36 "  ℹ README.md не создан (можно создать позже)"; \
+			echo "# My Project" > README.md; \
+			echo "" >> README.md; \
+			echo "Проект создан из [DevContainer Workspace](https://github.com/nizovtsevnv/devcontainer-workspace)" >> README.md; \
+			$(call log-success,README.md создан); \
 		fi; \
 	else \
-		$(call ensure-devenv-ready); \
-		if $(MAKE) exec-interactive "gum confirm 'Создать README.md проекта?' --default"; then \
-			if [ -f "README.project.md" ]; then \
-				cp README.project.md README.md; \
-				printf "\033[0;32m  ✓ README.md создан из шаблона\033[0m\n"; \
-			else \
-				echo "# My Project" > README.md; \
-				echo "" >> README.md; \
-				echo "Проект создан из [DevContainer Workspace](https://github.com/nizovtsevnv/devcontainer-workspace)" >> README.md; \
-				printf "\033[0;32m  ✓ README.md создан\033[0m\n"; \
-			fi; \
-		else \
-			printf "\033[0;36m  ℹ README.md не создан (можно создать позже)\033[0m\n"; \
-		fi; \
+		$(call log-info,README.md не создан (можно создать позже)); \
 	fi
 endef

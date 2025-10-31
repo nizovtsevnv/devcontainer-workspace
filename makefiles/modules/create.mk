@@ -12,26 +12,25 @@ MODULE_NAME ?=
 .PHONY: module
 module:
 	@$(call ensure-devenv-ready)
-	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
-		$(MAKE) module-interactive MODULE_STACK="$(MODULE_STACK)" MODULE_TYPE="$(MODULE_TYPE)" MODULE_NAME="$(MODULE_NAME)" MODULE_TARGET="$(MODULE_TARGET)"; \
-	else \
-		$(MAKE) exec-interactive "make module-interactive MODULE_STACK='$(MODULE_STACK)' MODULE_TYPE='$(MODULE_TYPE)' MODULE_NAME='$(MODULE_NAME)' MODULE_TARGET='$(MODULE_TARGET)'"; \
-	fi
+	@$(MAKE) module-interactive MODULE_STACK="$(MODULE_STACK)" MODULE_TYPE="$(MODULE_TYPE)" MODULE_NAME="$(MODULE_NAME)" MODULE_TARGET="$(MODULE_TARGET)"
 
 # Интерактивная команда (только для запуска внутри контейнера)
 .PHONY: module-interactive
 module-interactive:
-	@$(call log-info,Создание нового модуля:)
+	@$(call log-section,Создание нового модуля)
+	@printf "\n"
 
 	@# Выбор стека если не указан
 	@if [ -z "$(MODULE_STACK)" ]; then \
-		DISPLAY=$$(gum choose --header "Выберите стек:" "Node.js" "PHP" "Python" "Rust"); \
+		$(call log-info,Шаг 1/3: Выберите стек технологий); \
+		DISPLAY=$$(sh makefiles/scripts/select-menu.sh "Node.js" "PHP" "Python" "Rust") || exit 1; \
 		case "$$DISPLAY" in \
 			"Node.js") STACK="nodejs" ;; \
 			"PHP") STACK="php" ;; \
 			"Python") STACK="python" ;; \
 			"Rust") STACK="rust" ;; \
 		esac; \
+		printf "\n"; \
 	else \
 		STACK="$(MODULE_STACK)"; \
 	fi; \
@@ -44,10 +43,12 @@ module-interactive:
 .PHONY: module-select-type-nodejs
 module-select-type-nodejs:
 	@if [ -z "$(MODULE_TYPE)" ]; then \
-		SEL=$$(gum choose --header "Выберите тип Node.js проекта:" "Bun (TypeScript)" "npm (TypeScript)" "pnpm (TypeScript)" "yarn (TypeScript)" "Next.js (TypeScript + Tailwind)" "Expo (TypeScript)" "SvelteKit (TypeScript)"); \
+		$(call log-info,Шаг 2/3: Выберите тип Node.js проекта); \
+		SEL=$$(sh makefiles/scripts/select-menu.sh "Bun (TypeScript)" "npm (TypeScript)" "pnpm (TypeScript)" "yarn (TypeScript)" "Next.js (TypeScript + Tailwind)" "Expo (TypeScript)" "SvelteKit (TypeScript)") || exit 1; \
 		case "$$SEL" in \
 			"Bun"*) TYPE="bun" ;; "npm"*) TYPE="npm" ;; "pnpm"*) TYPE="pnpm" ;; "yarn"*) TYPE="yarn" ;; "Next.js"*) TYPE="nextjs" ;; "Expo"*) TYPE="expo" ;; "SvelteKit"*) TYPE="svelte" ;; \
 		esac; \
+		printf "\n"; \
 	else \
 		TYPE="$(MODULE_TYPE)"; \
 	fi; \
@@ -56,10 +57,12 @@ module-select-type-nodejs:
 .PHONY: module-select-type-php
 module-select-type-php:
 	@if [ -z "$(MODULE_TYPE)" ]; then \
-		SEL=$$(gum choose --header "Выберите тип PHP проекта:" "Composer library" "Composer project" "Laravel"); \
+		$(call log-info,Шаг 2/3: Выберите тип PHP проекта); \
+		SEL=$$(sh makefiles/scripts/select-menu.sh "Composer library" "Composer project" "Laravel") || exit 1; \
 		case "$$SEL" in \
 			"Composer library") TYPE="composer-lib" ;; "Composer project") TYPE="composer-project" ;; "Laravel") TYPE="laravel" ;; \
 		esac; \
+		printf "\n"; \
 	else \
 		TYPE="$(MODULE_TYPE)"; \
 	fi; \
@@ -68,11 +71,13 @@ module-select-type-php:
 .PHONY: module-select-type-python
 module-select-type-python:
 	@if [ -z "$(MODULE_TYPE)" ]; then \
-		SEL=$$(gum choose --header "Выберите тип Python проекта:" "UV (быстрый, рекомендуется)" "Poetry"); \
+		$(call log-info,Шаг 2/3: Выберите тип Python проекта); \
+		SEL=$$(sh makefiles/scripts/select-menu.sh "UV (быстрый, рекомендуется)" "Poetry") || exit 1; \
 		case "$$SEL" in \
 			"UV"*) TYPE="uv" ;; \
 			"Poetry") TYPE="poetry" ;; \
 		esac; \
+		printf "\n"; \
 	else \
 		TYPE="$(MODULE_TYPE)"; \
 	fi; \
@@ -82,12 +87,14 @@ module-select-type-python:
 .PHONY: module-select-type-rust
 module-select-type-rust:
 	@if [ -z "$(MODULE_TYPE)" ]; then \
-		SEL=$$(gum choose --header "Выберите тип Rust проекта:" "Binary (приложение)" "Library (библиотека)" "Dioxus (веб-приложение)"); \
+		$(call log-info,Шаг 2/3: Выберите тип Rust проекта); \
+		SEL=$$(sh makefiles/scripts/select-menu.sh "Binary (приложение)" "Library (библиотека)" "Dioxus (веб-приложение)") || exit 1; \
 		case "$$SEL" in \
 			"Binary"*) TYPE="bin" ;; \
 			"Library"*) TYPE="lib" ;; \
 			"Dioxus"*) TYPE="dioxus" ;; \
 		esac; \
+		printf "\n"; \
 	else \
 		TYPE="$(MODULE_TYPE)"; \
 	fi; \
@@ -101,16 +108,19 @@ module-select-type-rust:
 .PHONY: module-request-name
 module-request-name:
 	@if [ -z "$(MODULE_NAME)" ]; then \
-		NAME=$$(gum input --prompt "Введите имя модуля: " --placeholder "example-module"); \
+		$(call log-info,Шаг 3/3: Введите имя модуля (буквы цифры дефис underscore)); \
+		printf "\n"; \
+		NAME=$$($(call ask-input,example-module,Имя модуля)); \
 		if [ -z "$$NAME" ]; then \
-			printf "$(COLOR_ERROR)✗ %s$(COLOR_RESET)\n" "Имя не может быть пустым" >&2; \
+			$(call log-error,Имя не может быть пустым); \
 			exit 1; \
 		fi; \
+		printf "\n"; \
 	else \
 		NAME="$(MODULE_NAME)"; \
 	fi; \
 	\
-	$(MAKE) module-validate-and-create STACK=$(STACK) TYPE=$(TYPE) NAME=$$NAME
+	$(MAKE) module-validate-and-create STACK=$(STACK) TYPE=$(TYPE) NAME="$$NAME"
 
 # ===================================
 # Валидация и создание
@@ -142,7 +152,7 @@ module-validate-and-create:
 
 .PHONY: module-create-nodejs-bun
 module-create-nodejs-bun:
-	@$(MAKE) exec "gum spin --spinner dot --title 'Создание Bun проекта: $(NAME)' -- sh -c 'cd $(MODULE_TARGET) && bun init -y $(NAME)'" >/dev/null 2>&1
+	@$(call log-spinner,Создание Bun проекта: $(NAME),$(MAKE) exec "sh -c 'cd $(MODULE_TARGET) && bun init -y $(NAME)'")
 	@# Добавить scripts для тестов
 	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
 		cd $(MODULE_TARGET)/$(NAME) && npm pkg set scripts.test="echo 'nodejs test passed'" && npm pkg set scripts.build="echo 'nodejs build passed'"; \
@@ -153,38 +163,39 @@ module-create-nodejs-bun:
 
 .PHONY: module-create-nodejs-npm
 module-create-nodejs-npm:
-	@$(MAKE) exec "gum spin --spinner dot --title 'Создание npm проекта: $(NAME)' -- sh -c 'mkdir -p $(MODULE_TARGET)/$(NAME) && cd $(MODULE_TARGET)/$(NAME) && npm init -y && npm pkg set type=module'" >/dev/null 2>&1
+	@$(call log-spinner,Создание npm проекта: $(NAME),$(MAKE) exec "sh -c 'mkdir -p $(MODULE_TARGET)/$(NAME) && cd $(MODULE_TARGET)/$(NAME) && npm init -y && npm pkg set type=module'")
 	@$(call log-success,npm проект создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-nodejs-pnpm
 module-create-nodejs-pnpm:
-	@$(MAKE) exec "gum spin --spinner dot --title 'Создание pnpm проекта: $(NAME)' -- sh -c 'mkdir -p $(MODULE_TARGET)/$(NAME) && cd $(MODULE_TARGET)/$(NAME) && pnpm init'" >/dev/null 2>&1
+	@$(call log-spinner,Создание pnpm проекта: $(NAME),$(MAKE) exec "sh -c 'mkdir -p $(MODULE_TARGET)/$(NAME) && cd $(MODULE_TARGET)/$(NAME) && pnpm init'")
 	@$(call log-success,pnpm проект создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-nodejs-yarn
 module-create-nodejs-yarn:
-	@$(MAKE) exec "gum spin --spinner dot --title 'Создание yarn проекта: $(NAME)' -- sh -c 'mkdir -p $(MODULE_TARGET)/$(NAME) && cd $(MODULE_TARGET)/$(NAME) && yarn init -y'" >/dev/null 2>&1
+	@$(call log-spinner,Создание yarn проекта: $(NAME),$(MAKE) exec "sh -c 'mkdir -p $(MODULE_TARGET)/$(NAME) && cd $(MODULE_TARGET)/$(NAME) && yarn init -y'")
 	@$(call log-success,yarn проект создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-nodejs-nextjs
 module-create-nodejs-nextjs:
-	@$(MAKE) exec "gum spin --spinner dot --title 'Создание Next.js проекта: $(NAME)' -- sh -c 'cd $(MODULE_TARGET) && bunx create-next-app@latest $(NAME) --typescript --tailwind --app --no-src-dir --import-alias @/* --turbopack --skip-install'" >/dev/null 2>&1
+	@$(call log-info,Создание Next.js проекта: $(NAME))
+	@printf "\n"
+	@$(MAKE) exec-interactive "sh -c 'cd $(MODULE_TARGET) && bunx create-next-app@latest $(NAME) --typescript --tailwind --app --no-src-dir --import-alias @/* --turbopack --skip-install'"
+	@printf "\n"
 	@$(call log-success,Next.js проект создан: $(MODULE_TARGET)/$(NAME))
-	@$(call log-info,Установка зависимостей...)
-	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && bun install"
+	@$(call log-spinner,Установка зависимостей,$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && bun install")
 	@$(call log-success,Зависимости установлены)
 
 .PHONY: module-create-nodejs-expo
 module-create-nodejs-expo:
-	@$(MAKE) exec "gum spin --spinner dot --title 'Создание Expo проекта: $(NAME)' -- sh -c 'cd $(MODULE_TARGET) && bunx create-expo-app@latest $(NAME) --template blank-typescript'" >/dev/null 2>&1
+	@$(call log-spinner,Создание Expo проекта: $(NAME),$(MAKE) exec "sh -c 'cd $(MODULE_TARGET) && bunx create-expo-app@latest $(NAME) --template blank-typescript'")
 	@$(call log-success,Expo проект создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-nodejs-svelte
 module-create-nodejs-svelte:
-	@$(MAKE) exec "gum spin --spinner dot --title 'Создание SvelteKit проекта: $(NAME)' -- sh -c 'cd $(MODULE_TARGET) && bunx sv create $(NAME) --template minimal --types ts --no-add-ons --no-install'" >/dev/null 2>&1
+	@$(call log-spinner,Создание SvelteKit проекта: $(NAME),$(MAKE) exec "sh -c 'cd $(MODULE_TARGET) && bunx sv create $(NAME) --template minimal --types ts --no-add-ons --no-install'")
 	@$(call log-success,SvelteKit проект создан: $(MODULE_TARGET)/$(NAME))
-	@$(call log-info,Установка зависимостей...)
-	@$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && bun install"
+	@$(call log-spinner,Установка зависимостей,$(MAKE) exec "cd $(MODULE_TARGET)/$(NAME) && bun install")
 	@$(call log-success,Зависимости установлены)
 
 # ===================================
@@ -193,7 +204,7 @@ module-create-nodejs-svelte:
 
 .PHONY: module-create-php-composer-lib
 module-create-php-composer-lib:
-	@$(MAKE) exec "gum spin --spinner dot --title 'Создание Composer library: $(NAME)' -- sh -c 'mkdir -p $(MODULE_TARGET)/$(NAME) && cd $(MODULE_TARGET)/$(NAME) && composer init --name=vendor/$(NAME) --type=library --no-interaction'" >/dev/null 2>&1
+	@$(call log-spinner,Создание Composer library: $(NAME),$(MAKE) exec "sh -c 'mkdir -p $(MODULE_TARGET)/$(NAME) && cd $(MODULE_TARGET)/$(NAME) && composer init --name=vendor/$(NAME) --type=library --no-interaction'")
 	@# Добавить test script
 	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
 		cd $(MODULE_TARGET)/$(NAME) && composer config scripts.test "echo 'php test passed'"; \
@@ -204,7 +215,7 @@ module-create-php-composer-lib:
 
 .PHONY: module-create-php-composer-project
 module-create-php-composer-project:
-	@$(MAKE) exec "gum spin --spinner dot --title 'Создание Composer project: $(NAME)' -- sh -c 'mkdir -p $(MODULE_TARGET)/$(NAME) && cd $(MODULE_TARGET)/$(NAME) && composer init --name=vendor/$(NAME) --type=project --no-interaction'" >/dev/null 2>&1
+	@$(call log-spinner,Создание Composer project: $(NAME),$(MAKE) exec "sh -c 'mkdir -p $(MODULE_TARGET)/$(NAME) && cd $(MODULE_TARGET)/$(NAME) && composer init --name=vendor/$(NAME) --type=project --no-interaction'")
 	@$(call log-success,Composer project создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-php-laravel
@@ -214,7 +225,7 @@ module-create-php-laravel:
 		$(call log-info,Установка Laravel installer...); \
 		$(MAKE) exec "composer global require laravel/installer"; \
 	fi
-	@$(MAKE) exec "gum spin --spinner dot --title 'Создание Laravel проекта: $(NAME)' -- sh -c 'cd $(MODULE_TARGET) && laravel new $(NAME) --no-interaction'" >/dev/null 2>&1
+	@$(call log-spinner,Создание Laravel проекта: $(NAME),$(MAKE) exec "sh -c 'cd $(MODULE_TARGET) && laravel new $(NAME) --no-interaction'")
 	@$(call log-success,Laravel проект создан: $(MODULE_TARGET)/$(NAME))
 
 # ===================================
@@ -223,12 +234,12 @@ module-create-php-laravel:
 
 .PHONY: module-create-python-uv
 module-create-python-uv:
-	@$(MAKE) exec "gum spin --spinner dot --title 'Создание UV проекта: $(NAME)' -- sh -c 'cd $(MODULE_TARGET) && uv init $(NAME)'" >/dev/null 2>&1
+	@$(call log-spinner,Создание UV проекта: $(NAME),$(MAKE) exec "sh -c 'cd $(MODULE_TARGET) && uv init $(NAME)'")
 	@$(call log-success,UV проект создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-python-poetry
 module-create-python-poetry:
-	@$(MAKE) exec "gum spin --spinner dot --title 'Создание Poetry проекта: $(NAME)' -- sh -c 'cd $(MODULE_TARGET) && poetry new $(NAME)'" >/dev/null 2>&1
+	@$(call log-spinner,Создание Poetry проекта: $(NAME),$(MAKE) exec "sh -c 'cd $(MODULE_TARGET) && poetry new $(NAME)'")
 	@# Создать test_main.py
 	@if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
 		printf 'def test_main():\n    print("python test passed")\n    assert True\n' > $(MODULE_TARGET)/$(NAME)/tests/test_main.py; \
@@ -243,12 +254,12 @@ module-create-python-poetry:
 
 .PHONY: module-create-rust-bin
 module-create-rust-bin:
-	@$(MAKE) exec "gum spin --spinner dot --title 'Создание Cargo binary: $(NAME)' -- sh -c 'cd $(MODULE_TARGET) && cargo new $(NAME)'" >/dev/null 2>&1
+	@$(call log-spinner,Создание Cargo binary: $(NAME),$(MAKE) exec "sh -c 'cd $(MODULE_TARGET) && cargo new $(NAME)'")
 	@$(call log-success,Cargo binary создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-rust-lib
 module-create-rust-lib:
-	@$(MAKE) exec "gum spin --spinner dot --title 'Создание Cargo library: $(NAME)' -- sh -c 'cd $(MODULE_TARGET) && cargo new $(NAME) --lib'" >/dev/null 2>&1
+	@$(call log-spinner,Создание Cargo library: $(NAME),$(MAKE) exec "sh -c 'cd $(MODULE_TARGET) && cargo new $(NAME) --lib'")
 	@$(call log-success,Cargo library создан: $(MODULE_TARGET)/$(NAME))
 
 .PHONY: module-create-rust-dioxus
@@ -258,5 +269,5 @@ module-create-rust-dioxus:
 		$(call log-info,Установка Dioxus CLI...); \
 		$(MAKE) exec "cargo install dioxus-cli"; \
 	fi
-	@$(MAKE) exec "gum spin --spinner dot --title 'Создание Dioxus проекта: $(NAME)' -- sh -c 'cd $(MODULE_TARGET) && dx new $(NAME) --platform web'" >/dev/null 2>&1
+	@$(call log-spinner,Создание Dioxus проекта: $(NAME),$(MAKE) exec "sh -c 'cd $(MODULE_TARGET) && dx new $(NAME) --platform web'")
 	@$(call log-success,Dioxus проект создан: $(MODULE_TARGET)/$(NAME))

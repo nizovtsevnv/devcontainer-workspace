@@ -1,8 +1,8 @@
 # ===================================
-# UI функции (gum-based) и логирование
+# UI функции и логирование
 # ===================================
 
-# Функции логирования с использованием gum
+# Функции логирования
 # Использование: $(call log-info,message)
 
 define log-info
@@ -56,38 +56,38 @@ define print-commands-table
 endef
 
 # Показать спиннер во время выполнения команды
-# Логика выбора gum:
-#   - Для git команд (начинаются с 'git '):
-#     1. Если gum доступен на хосте - используем его
-#     2. Иначе - fallback на статический спиннер
-#   - Для остальных команд:
-#     1. Если gum доступен на хосте - используем его
-#     2. Если нет, но контейнер запущен - используем gum из контейнера
-#     3. Иначе - fallback на статический спиннер
+# Параметр: $(1) - сообщение, $(2) - команда
 # Использование: @$(call log-spinner,message,command)
 define log-spinner
-	{ \
-	case "$(2)" in \
-		git\ *) \
-			if command -v gum >/dev/null 2>&1; then \
-				gum spin --spinner dot --title "$(1)" -- sh -c '$(2)'; \
-			else \
-				printf "⠙ $(1)...\n"; \
-				sh -c '$(2)'; \
-			fi \
-			;; \
-		*) \
-			if command -v gum >/dev/null 2>&1; then \
-				gum spin --spinner dot --title "$(1)" -- sh -c '$(2)'; \
-			elif $(CONTAINER_RUNTIME) ps --format "{{.Names}}" 2>/dev/null | grep -q "^$(CONTAINER_NAME)$$"; then \
-				$(CONTAINER_RUNTIME) exec $(CONTAINER_NAME) gum spin --spinner dot --title "$(1)" -- sh -c '$(2)'; \
-			else \
-				printf "⠙ $(1)...\n"; \
-				sh -c '$(2)'; \
-			fi \
-			;; \
-	esac; \
-	}
+	title="$(1)"; \
+	tmpfile=$$(mktemp); \
+	trap "rm -f $$tmpfile" EXIT INT TERM; \
+	\
+	$(2) > "$$tmpfile" 2>&1 & \
+	pid=$$!; \
+	\
+	sp='◐◓◑◒'; \
+	i=0; \
+	while ps -p $$pid > /dev/null 2>&1; do \
+		idx=$$((i % 4)); \
+		char=$$(printf '%s' "$$sp" | awk -v i=$$((idx+1)) '{print substr($$0,i,1)}'); \
+		printf "\r$$char $$title..." >&2; \
+		i=$$((i + 1)); \
+		sleep 0.15; \
+	done; \
+	\
+	wait $$pid; \
+	exit_code=$$?; \
+	\
+	if [ $$exit_code -eq 0 ]; then \
+		printf "\r$(COLOR_SUCCESS)✓$(COLOR_RESET) $$title   \n" >&2; \
+	else \
+		printf "\r$(COLOR_ERROR)✗$(COLOR_RESET) $$title   \n" >&2; \
+		cat "$$tmpfile" >&2; \
+	fi; \
+	\
+	rm -f "$$tmpfile"; \
+	exit $$exit_code
 endef
 
 # ===================================
@@ -98,7 +98,7 @@ endef
 # Использование: $(call require-var,VAR_NAME)
 define require-var
 	if [ -z "$($(1))" ]; then \
-		gum style --foreground 196 "✗ ERROR: Переменная $(1) не определена" >&2; \
+		printf "$(COLOR_ERROR)✗ ERROR: Переменная $(1) не определена$(COLOR_RESET)\n" >&2; \
 		exit 1; \
 	fi
 endef
@@ -107,65 +107,33 @@ endef
 # Использование: $(call check-command,command-name)
 define check-command
 	command -v $(1) >/dev/null 2>&1 || \
-		(gum style --foreground 196 "✗ ERROR: Команда '$(1)' не найдена" >&2; exit 1)
+		(printf "$(COLOR_ERROR)✗ ERROR: Команда '$(1)' не найдена$(COLOR_RESET)\n" >&2; exit 1)
 endef
 
 # ===================================
-# Интерактивные функции (gum)
+# Интерактивные функции
 # ===================================
 
-# Запрос подтверждения с использованием gum (дефолт: NO)
+# Запрос подтверждения (дефолт: NO)
 # Использование: $(call ask-confirm,message)
 define ask-confirm
-	if [ "$(IS_INSIDE_CONTAINER)" = "1" ]; then \
-		if command -v gum >/dev/null 2>&1; then \
-			if ! gum confirm "$(1)?"; then \
-				gum style --foreground 36 "ℹ INFO: Отменено"; \
-				exit 1; \
-			fi; \
-		else \
-			printf "$(1)? [y/N]: "; \
-			read -r answer; \
-			case "$$answer" in \
-				[Yy]|[Yy][Ee][Ss]) ;; \
-				*) printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; exit 1 ;; \
-			esac; \
-		fi; \
-	else \
-		if command -v gum >/dev/null 2>&1; then \
-			if ! gum confirm "$(1)?"; then \
-				gum style --foreground 36 "ℹ INFO: Отменено"; \
-				exit 1; \
-			fi; \
-		fi; \
-	fi
+	printf "$(COLOR_WARNING)? $(COLOR_RESET)%s $(COLOR_INFO)[y/N]$(COLOR_RESET): " "$(1)"; \
+	read -r answer; \
+	case "$$answer" in \
+		[Yy]|[Yy][Ee][Ss]) printf "$(COLOR_SUCCESS)✓ Продолжаем$(COLOR_RESET)\n" ;; \
+		*) printf "$(COLOR_INFO)ℹ Отменено$(COLOR_RESET)\n"; exit 1 ;; \
+	esac
 endef
 
-# Запрос подтверждения с использованием gum (дефолт: YES)
+# Запрос подтверждения (дефолт: YES)
 # Использование: $(call ask-confirm-default-yes,message)
 define ask-confirm-default-yes
-	if [ "$(IS_INSIDE_CONTAINER)" = "1" ]; then \
-		if command -v gum >/dev/null 2>&1; then \
-			if ! gum confirm "$(1)?" --default; then \
-				gum style --foreground 36 "ℹ INFO: Отменено"; \
-				exit 1; \
-			fi; \
-		else \
-			printf "$(1)? [Y/n]: "; \
-			read -r answer; \
-			case "$$answer" in \
-				[Nn]|[Nn][Oo]) printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; exit 1 ;; \
-				*) ;; \
-			esac; \
-		fi; \
-	else \
-		if command -v gum >/dev/null 2>&1; then \
-			if ! gum confirm "$(1)?" --default; then \
-				gum style --foreground 36 "ℹ INFO: Отменено"; \
-				exit 1; \
-			fi; \
-		fi; \
-	fi
+	printf "$(COLOR_WARNING)? $(COLOR_RESET)%s $(COLOR_SUCCESS)[Y/n]$(COLOR_RESET): " "$(1)"; \
+	read -r answer; \
+	case "$$answer" in \
+		[Nn]|[Nn][Oo]) printf "$(COLOR_INFO)ℹ Отменено$(COLOR_RESET)\n"; exit 1 ;; \
+		*) printf "$(COLOR_SUCCESS)✓ Продолжаем$(COLOR_RESET)\n" ;; \
+	esac
 endef
 
 # Запросить текстовый ввод от пользователя
@@ -173,7 +141,9 @@ endef
 # Возвращает: введенный текст
 # Использование: NAME=$$($(call ask-input,my-module,Введите имя))
 define ask-input
-	gum input --placeholder "$(1)" --prompt "$(2) "
+	printf "$(COLOR_INFO)➜ $(COLOR_RESET)%s $(COLOR_WARNING)[%s]$(COLOR_RESET): " "$(2)" "$(1)" >&2; \
+	IFS= read -r input_value </dev/tty; \
+	printf "%s" "$$input_value"
 endef
 
 # Запросить текстовый ввод с дефолтным значением
@@ -181,23 +151,24 @@ endef
 # Возвращает: введенный текст или default
 # Использование: URL=$$($(call ask-input-with-default,https://github.com/user/repo,Введите URL))
 define ask-input-with-default
-	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
-		gum input --value "$(1)" --prompt "$(2) "; \
+	printf "$(COLOR_INFO)➜ $(COLOR_RESET)%s $(COLOR_SUCCESS)[default: %s]$(COLOR_RESET): " "$(2)" "$(1)" >&2; \
+	read -r input_value </dev/tty; \
+	if [ -z "$$input_value" ]; then \
+		echo "$(1)"; \
 	else \
-		$(call ensure-devenv-ready); \
-		$(MAKE) exec-interactive "gum input --value '$(1)' --prompt '$(2) '"; \
+		echo "$$input_value"; \
 	fi
 endef
 
-# Выбор из списка опций (меню)
+# Выбор из списка опций (меню со стрелками)
 # Параметр: $(1) - header text, $(2..N) - options (space-separated)
 # Возвращает: выбранную опцию
 # Использование: CHOICE=$$($(call ask-choose,Выберите стек,nodejs php python rust))
 define ask-choose
-	HEADER="$(1)"; \
+	printf "$(COLOR_SECTION)▶ %s$(COLOR_RESET)\n" "$(1)"; \
+	printf "$(COLOR_INFO)(используйте ↑↓ и Enter)$(COLOR_RESET)\n"; \
 	shift; \
-	OPTIONS="$$@"; \
-	echo "$$OPTIONS" | tr ' ' '\n' | gum choose --header "$$HEADER"
+	sh makefiles/scripts/select-menu.sh "$$@"
 endef
 
 # Выбор одного элемента из переданного списка строк
@@ -205,22 +176,19 @@ endef
 # Возвращает: выбранную опцию
 # Использование: VERSION=$$($(call ask-choose-single,Выберите версию,0.3.1,$$VERSION_OPTIONS))
 define ask-choose-single
-	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
-		echo "$(3)" | tr ' ' '\n' | gum choose --header "$(1)" --selected="$(2)"; \
-	else \
-		$(call ensure-devenv-ready); \
-		echo "$(3)" | $(MAKE) exec-interactive "tr ' ' '\n' | gum choose --header '$(1)' --selected='$(2)'"; \
-	fi
+	printf "$(COLOR_SECTION)▶ %s$(COLOR_RESET)\n" "$(1)"; \
+	printf "$(COLOR_INFO)(по умолчанию: $(2), используйте ↑↓ и Enter)$(COLOR_RESET)\n"; \
+	options=$$(echo "$(3)" | tr ' ' '\n'); \
+	sh makefiles/scripts/select-menu.sh $$options
 endef
 
 # Фильтрация списка с поиском
 # Параметр: $(1) - header text, $(2) - items (newline-separated or space-separated)
 # Возвращает: выбранный элемент
 # Использование: VERSION=$$($(call ask-filter,Выберите версию,$(VERSIONS)))
+# Примечание: упрощенная версия без поиска - использует ask-choose-single
 define ask-filter
-	HEADER="$(1)"; \
-	ITEMS="$(2)"; \
-	echo "$$ITEMS" | tr ' ' '\n' | gum filter --header "$$HEADER" --placeholder "Поиск..."
+	$(call ask-choose-single,$(1),,$$(echo "$(2)" | tr ' ' '\n'))
 endef
 
 # Multiline текстовый ввод
@@ -228,10 +196,8 @@ endef
 # Возвращает: введенный текст
 # Использование: MESSAGE=$$($(call ask-write,Сообщение коммита,Опишите изменения...))
 define ask-write
-	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
-		gum write --header "$(1)" --placeholder "$(2)"; \
-	else \
-		$(call ensure-devenv-ready); \
-		$(MAKE) exec-interactive "gum write --header '$(1)' --placeholder '$(2)'"; \
-	fi
+	printf "$(COLOR_SECTION)▶ %s$(COLOR_RESET)\n" "$(1)"; \
+	printf "$(COLOR_INFO)[%s]$(COLOR_RESET)\n" "$(2)"; \
+	printf "$(COLOR_WARNING)Введите текст (Ctrl+D для завершения):$(COLOR_RESET)\n"; \
+	cat
 endef

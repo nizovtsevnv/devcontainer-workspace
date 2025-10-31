@@ -57,17 +57,6 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
   && rm -rf /var/lib/apt/lists/*
 
 # ===================================
-# Gum - интерактивные CLI компоненты
-# ===================================
-RUN mkdir -p /etc/apt/keyrings \
-  && curl -fsSL https://repo.charm.sh/apt/gpg.key | gpg --dearmor -o /etc/apt/keyrings/charm.gpg \
-  && echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" > /etc/apt/sources.list.d/charm.list \
-  && apt-get update \
-  && apt-get install -y gum \
-  && apt-get clean -y \
-  && rm -rf /var/lib/apt/lists/*
-
-# ===================================
 # Node.js + npm инструменты
 # ===================================
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
@@ -219,9 +208,9 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --de
 # Установка cargo утилит с кэшированием для ускорения сборки
 # Кэш монтируется с явным указанием uid/gid для корректных прав доступа
 RUN --mount=type=cache,target=/home/${USERNAME}/.cargo/registry,uid=${CONTAINER_UID},gid=${CONTAINER_GID} \
-    --mount=type=cache,target=/home/${USERNAME}/.cargo/git,uid=${CONTAINER_UID},gid=${CONTAINER_GID} \
-    . $HOME/.cargo/env \
-    && cargo install cargo-watch cargo-edit cargo-outdated
+  --mount=type=cache,target=/home/${USERNAME}/.cargo/git,uid=${CONTAINER_UID},gid=${CONTAINER_GID} \
+  . $HOME/.cargo/env \
+  && cargo install cargo-watch cargo-edit cargo-outdated
 
 # ===================================
 # Настройка окружения и PATH
@@ -244,7 +233,6 @@ RUN echo "========================================" \
   && echo "Make:      $(make --version | head -n1)" \
   && echo "jq:        $(jq --version)" \
   && echo "yq:        $(yq --version)" \
-  && echo "gum:       $(gum --version)" \
   && echo "----------------------------------------" \
   && echo "Node.js:   $(node --version)" \
   && echo "bun:       $(bun --version)" \
