@@ -150,6 +150,10 @@ RUN python3 -m pip install --break-system-packages \
   pytest \
   mypy
 
+# Установка uv (современный быстрый пакетный менеджер для Python)
+# Устанавливается от root для быстрого ID-mapping в Podman
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # ===================================
 # Создание непривилегированного пользователя
 # Совместимость с Docker и Podman на всех платформах
@@ -220,17 +224,11 @@ RUN --mount=type=cache,target=/home/${USERNAME}/.cargo/registry,uid=${CONTAINER_
     && cargo install cargo-watch cargo-edit cargo-outdated
 
 # ===================================
-# Python пакетные менеджеры для пользователя
-# ===================================
-# Установка uv (современный быстрый пакетный менеджер для Python)
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# ===================================
 # Настройка окружения и PATH
 # ===================================
 RUN npm config set prefix "/home/$USERNAME/.npm-global"
 
-ENV PATH="/home/$USERNAME/.npm-global/bin:/home/$USERNAME/.cargo/bin:/home/$USERNAME/.composer/vendor/bin:/home/$USERNAME/.bun/bin:/root/.composer/vendor/bin:/root/.local/bin:${PATH}"
+ENV PATH="/home/$USERNAME/.npm-global/bin:/home/$USERNAME/.cargo/bin:/home/$USERNAME/.composer/vendor/bin:/home/$USERNAME/.bun/bin:/root/.composer/vendor/bin:/root/.local/bin:/root/.cargo/bin:${PATH}"
 
 # Настройка git для пользователя
 RUN git config --global init.defaultBranch main \

@@ -117,18 +117,34 @@ endef
 # Запрос подтверждения с использованием gum (дефолт: NO)
 # Использование: $(call ask-confirm,message)
 define ask-confirm
-	if ! gum confirm "$(1)?" --negative; then \
-		gum style --foreground 36 "ℹ INFO: Отменено"; \
-		exit 0; \
+	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
+		if ! gum confirm "$(1)?" --negative; then \
+			gum style --foreground 36 "ℹ INFO: Отменено"; \
+			exit 0; \
+		fi; \
+	else \
+		$(call ensure-devenv-ready); \
+		if ! $(MAKE) exec-interactive "gum confirm '$(1)?' --negative"; then \
+			printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; \
+			exit 0; \
+		fi; \
 	fi
 endef
 
 # Запрос подтверждения с использованием gum (дефолт: YES)
 # Использование: $(call ask-confirm-default-yes,message)
 define ask-confirm-default-yes
-	if ! gum confirm "$(1)?" --default --negative; then \
-		gum style --foreground 36 "ℹ INFO: Отменено"; \
-		exit 0; \
+	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
+		if ! gum confirm "$(1)?" --default --negative; then \
+			gum style --foreground 36 "ℹ INFO: Отменено"; \
+			exit 0; \
+		fi; \
+	else \
+		$(call ensure-devenv-ready); \
+		if ! $(MAKE) exec-interactive "gum confirm '$(1)?' --default --negative"; then \
+			printf "\033[0;36mℹ INFO: Отменено\033[0m\n"; \
+			exit 0; \
+		fi; \
 	fi
 endef
 
@@ -145,7 +161,12 @@ endef
 # Возвращает: введенный текст или default
 # Использование: URL=$$($(call ask-input-with-default,https://github.com/user/repo,Введите URL))
 define ask-input-with-default
-	gum input --value "$(1)" --prompt "$(2) "
+	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
+		gum input --value "$(1)" --prompt "$(2) "; \
+	else \
+		$(call ensure-devenv-ready); \
+		$(MAKE) exec-interactive "gum input --value '$(1)' --prompt '$(2) '"; \
+	fi
 endef
 
 # Выбор из списка опций (меню)
@@ -159,6 +180,19 @@ define ask-choose
 	echo "$$OPTIONS" | tr ' ' '\n' | gum choose --header "$$HEADER"
 endef
 
+# Выбор одного элемента из переданного списка строк
+# Параметр: $(1) - header text, $(2) - selected default, $(3) - options (newline or space separated)
+# Возвращает: выбранную опцию
+# Использование: VERSION=$$($(call ask-choose-single,Выберите версию,0.3.1,$$VERSION_OPTIONS))
+define ask-choose-single
+	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
+		echo "$(3)" | tr ' ' '\n' | gum choose --header "$(1)" --selected="$(2)"; \
+	else \
+		$(call ensure-devenv-ready); \
+		echo "$(3)" | $(MAKE) exec-interactive "tr ' ' '\n' | gum choose --header '$(1)' --selected='$(2)'"; \
+	fi
+endef
+
 # Фильтрация списка с поиском
 # Параметр: $(1) - header text, $(2) - items (newline-separated or space-separated)
 # Возвращает: выбранный элемент
@@ -167,4 +201,17 @@ define ask-filter
 	HEADER="$(1)"; \
 	ITEMS="$(2)"; \
 	echo "$$ITEMS" | tr ' ' '\n' | gum filter --header "$$HEADER" --placeholder "Поиск..."
+endef
+
+# Multiline текстовый ввод
+# Параметр: $(1) - header text, $(2) - placeholder text
+# Возвращает: введенный текст
+# Использование: MESSAGE=$$($(call ask-write,Сообщение коммита,Опишите изменения...))
+define ask-write
+	if [ "$(IS_INSIDE_CONTAINER)" = "0" ]; then \
+		gum write --header "$(1)" --placeholder "$(2)"; \
+	else \
+		$(call ensure-devenv-ready); \
+		$(MAKE) exec-interactive "gum write --header '$(1)' --placeholder '$(2)'"; \
+	fi
 endef

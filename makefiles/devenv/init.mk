@@ -6,7 +6,8 @@
 
 devenv-init-internal:
 	@$(call log-section,Инициализация проекта)
-	@if git remote get-url template >/dev/null 2>&1; then \
+	@$(call check-project-init-status); \
+	if [ "$$STATUS" = "инициализирован" ]; then \
 		$(call log-error,Проект уже инициализирован); \
 		$(call log-info,Remote 'template' уже существует); \
 		exit 1; \

@@ -17,7 +17,8 @@ else
 		$(call log-spinner,Запуск существующего контейнера,$(CONTAINER_RUNTIME) start $(CONTAINER_NAME) >/dev/null 2>&1); \
 		$(call log-success,Контейнер запущен); \
 	else \
-		$(call log-spinner,Создание контейнера из шаблона v$(CONTAINER_IMAGE_VERSION) ($(CONTAINER_NAME)),$(MAKE) --no-print-directory up-silent); \
+		$(call ensure-image-available); \
+		$(call log-spinner,Создание контейнера ($(CONTAINER_NAME)),$(MAKE) --no-print-directory up-silent); \
 		$(call log-success,Контейнер запущен); \
 	fi
 	@printf "\n"

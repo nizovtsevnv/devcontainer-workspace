@@ -45,8 +45,7 @@ devenv-update-project:
 	\
 	ALL_TAGS=$$($(call get-all-semantic-tags)); \
 	VERSION_OPTIONS=$$(echo "$$ALL_TAGS" | sed 's/^v//g' | tac | tr '\n' ' '); \
-	SELECTED=$$(echo "$$VERSION_OPTIONS" | tr ' ' '\n' | gum choose --header "Выберите версию для обновления:" --selected="$$LATEST_VERSION_CLEAN"); \
-	TARGET_VERSION="$$SELECTED"; \
+	TARGET_VERSION=$$($(call ask-choose-single,Выберите версию для обновления:,$$LATEST_VERSION_CLEAN,$$VERSION_OPTIONS)); \
 	\
 	HAS_PROJECT_GITHUB="no"; \
 	if [ -d .github ]; then \
@@ -94,7 +93,7 @@ devenv-update-project:
 	\
 	if $(call ask-confirm,Создать коммит обновления шаблона); then \
 		DEFAULT_MSG="chore: update devenv template to $$NEW_VERSION"; \
-		COMMIT_MSG=$$(gum input --value "$$DEFAULT_MSG" --prompt "Сообщение коммита: " --width=80); \
+		COMMIT_MSG=$$($(call ask-input-with-default,$$DEFAULT_MSG,Сообщение коммита:)); \
 		if [ -n "$$COMMIT_MSG" ]; then \
 			git commit -m "$$COMMIT_MSG" >/dev/null 2>&1; \
 			printf "\n"; \
