@@ -213,13 +213,14 @@ endef
 # Удалить артефакты шаблона (README.project.md, .github/)
 # Использование: @$(call remove-template-artifacts)
 define remove-template-artifacts
-	if [ -d ".github" ]; then \
-		rm -rf .github; \
-		$(call log-info,Удалены GitHub workflows шаблона); \
+	if [ -f ".github/workflows/release.yml" ]; then \
+		rm -f .github/workflows/release.yml; \
+		if [ -z "$$(ls -A .github/workflows/ 2>/dev/null)" ]; then \
+			rm -rf .github; \
+		fi; \
 	fi; \
 	if [ -f "README.project.md" ]; then \
 		rm -f README.project.md; \
-		$(call log-info,Удален README.project.md шаблона); \
 	fi
 endef
 
@@ -230,56 +231,34 @@ endef
 define auto-resolve-template-conflicts
 	CONFLICTS=$$(git diff --name-only --diff-filter=U 2>/dev/null); \
 	if [ -n "$$CONFLICTS" ]; then \
-		$(call log-info,Автоматическое разрешение конфликтов...); \
-		RESOLVED=0; \
-		UNRESOLVED=0; \
 		echo "$$CONFLICTS" | while read conflict_file; do \
 			case "$$conflict_file" in \
 				.template-version|Makefile|makefiles/*|.devcontainer/*) \
-					if git checkout --theirs "$$conflict_file" 2>/dev/null; then \
-						git add "$$conflict_file" 2>/dev/null; \
-						RESOLVED=$$((RESOLVED + 1)); \
-						$(call log-success,Разрешен: $$conflict_file [upstream]); \
-					fi \
+					git checkout --theirs "$$conflict_file" >/dev/null 2>&1; \
+					git add "$$conflict_file" >/dev/null 2>&1; \
 					;; \
 				.gitignore|.editorconfig) \
-					if git checkout --theirs "$$conflict_file" 2>/dev/null; then \
-						git add "$$conflict_file" 2>/dev/null; \
-						RESOLVED=$$((RESOLVED + 1)); \
-						$(call log-success,Разрешен: $$conflict_file [upstream]); \
-					fi \
+					git checkout --theirs "$$conflict_file" >/dev/null 2>&1; \
+					git add "$$conflict_file" >/dev/null 2>&1; \
 					;; \
 				modules/*|src/*|public/*|tests/*) \
-					if git checkout --ours "$$conflict_file" 2>/dev/null; then \
-						git add "$$conflict_file" 2>/dev/null; \
-						RESOLVED=$$((RESOLVED + 1)); \
-						$(call log-success,Разрешен: $$conflict_file [current]); \
-					fi \
+					git checkout --ours "$$conflict_file" >/dev/null 2>&1; \
+					git add "$$conflict_file" >/dev/null 2>&1; \
 					;; \
 				README.md) \
 					if [ -f ".template-version" ]; then \
-						if git checkout --ours "$$conflict_file" 2>/dev/null; then \
-							git add "$$conflict_file" 2>/dev/null; \
-							RESOLVED=$$((RESOLVED + 1)); \
-							$(call log-success,Разрешен: $$conflict_file [current]); \
-						fi; \
+						git checkout --ours "$$conflict_file" >/dev/null 2>&1; \
+						git add "$$conflict_file" >/dev/null 2>&1; \
 					else \
-						if git checkout --theirs "$$conflict_file" 2>/dev/null; then \
-							git add "$$conflict_file" 2>/dev/null; \
-							RESOLVED=$$((RESOLVED + 1)); \
-							$(call log-success,Разрешен: $$conflict_file [upstream]); \
-						fi; \
+						git checkout --theirs "$$conflict_file" >/dev/null 2>&1; \
+						git add "$$conflict_file" >/dev/null 2>&1; \
 					fi \
-					;; \
-				*) \
-					UNRESOLVED=$$((UNRESOLVED + 1)); \
-					$(call log-warning,Требует ручного разрешения: $$conflict_file); \
 					;; \
 			esac; \
 		done; \
 		REMAINING=$$(git diff --name-only --diff-filter=U 2>/dev/null | wc -l); \
 		if [ $$REMAINING -eq 0 ]; then \
-			$(call log-success,Все конфликты разрешены автоматически); \
+			$(call log-success,Конфликты разрешены автоматически); \
 		else \
 			$(call log-warning,Осталось конфликтов для ручного разрешения: $$REMAINING); \
 		fi; \
@@ -363,6 +342,172 @@ define ask-filter
 	fi
 endef
 
+# ===================================
+# Функции для создания модулей
+# ===================================
+
+# Выбор стека для создания модуля
+# Возвращает: nodejs | php | python | rust
+# Использование: STACK=$$($(call ask-module-stack))
+define ask-module-stack
+	if command -v gum >/dev/null 2>&1; then \
+		DISPLAY_NAME=$$(printf "Node.js\nPHP\nPython\nRust" | gum choose --header "Выберите стек:"); \
+		case "$$DISPLAY_NAME" in \
+			"Node.js") echo "nodejs" ;; \
+			"PHP") echo "php" ;; \
+			"Python") echo "python" ;; \
+			"Rust") echo "rust" ;; \
+		esac; \
+	else \
+		printf "$(COLOR_INFO)Выберите стек:$(COLOR_RESET)\n"; \
+		printf "  1) Node.js\n  2) PHP\n  3) Python\n  4) Rust\n"; \
+		printf "\n$(COLOR_INFO)Ваш выбор [1-4]:$(COLOR_RESET) "; \
+		read choice; \
+		case $$choice in \
+			1) echo "nodejs" ;; \
+			2) echo "php" ;; \
+			3) echo "python" ;; \
+			4) echo "rust" ;; \
+			*) $(call log-error,Неверный выбор); exit 1 ;; \
+		esac; \
+	fi
+endef
+
+# Выбор типа Node.js проекта
+# Возвращает: bun | npm | pnpm | yarn | nextjs | expo | svelte
+# Использование: TYPE=$$($(call ask-module-type-nodejs))
+define ask-module-type-nodejs
+	if command -v gum >/dev/null 2>&1; then \
+		SELECTED=$$(gum choose --header "Выберите тип Node.js проекта:" \
+			"Bun (TypeScript)" \
+			"npm (TypeScript)" \
+			"pnpm (TypeScript)" \
+			"yarn (TypeScript)" \
+			"Next.js (TypeScript + Tailwind)" \
+			"Expo (TypeScript)" \
+			"SvelteKit (TypeScript)"); \
+		case "$$SELECTED" in \
+			"Bun"*) echo "bun" ;; \
+			"npm"*) echo "npm" ;; \
+			"pnpm"*) echo "pnpm" ;; \
+			"yarn"*) echo "yarn" ;; \
+			"Next.js"*) echo "nextjs" ;; \
+			"Expo"*) echo "expo" ;; \
+			"SvelteKit"*) echo "svelte" ;; \
+		esac; \
+	else \
+		printf "$(COLOR_INFO)Выберите тип Node.js проекта:$(COLOR_RESET)\n"; \
+		printf "  1) Bun (TypeScript)\n  2) npm (TypeScript)\n  3) pnpm (TypeScript)\n"; \
+		printf "  4) yarn (TypeScript)\n  5) Next.js (TypeScript + Tailwind)\n"; \
+		printf "  6) Expo (TypeScript)\n  7) SvelteKit (TypeScript)\n"; \
+		printf "\n$(COLOR_INFO)Ваш выбор [1-7]:$(COLOR_RESET) "; \
+		read choice; \
+		case $$choice in \
+			1) echo "bun" ;; \
+			2) echo "npm" ;; \
+			3) echo "pnpm" ;; \
+			4) echo "yarn" ;; \
+			5) echo "nextjs" ;; \
+			6) echo "expo" ;; \
+			7) echo "svelte" ;; \
+			*) $(call log-error,Неверный выбор); exit 1 ;; \
+		esac; \
+	fi
+endef
+
+# Выбор типа PHP проекта
+# Возвращает: composer-lib | composer-project | laravel
+# Использование: TYPE=$$($(call ask-module-type-php))
+define ask-module-type-php
+	if command -v gum >/dev/null 2>&1; then \
+		SELECTED=$$(gum choose --header "Выберите тип PHP проекта:" \
+			"Composer library" \
+			"Composer project" \
+			"Laravel"); \
+		case "$$SELECTED" in \
+			"Composer library") echo "composer-lib" ;; \
+			"Composer project") echo "composer-project" ;; \
+			"Laravel") echo "laravel" ;; \
+		esac; \
+	else \
+		printf "$(COLOR_INFO)Выберите тип PHP проекта:$(COLOR_RESET)\n"; \
+		printf "  1) Composer library\n  2) Composer project\n  3) Laravel\n"; \
+		printf "\n$(COLOR_INFO)Ваш выбор [1-3]:$(COLOR_RESET) "; \
+		read choice; \
+		case $$choice in \
+			1) echo "composer-lib" ;; \
+			2) echo "composer-project" ;; \
+			3) echo "laravel" ;; \
+			*) $(call log-error,Неверный выбор); exit 1 ;; \
+		esac; \
+	fi
+endef
+
+# Выбор типа Python проекта
+# Возвращает: uv | poetry
+# Использование: TYPE=$$($(call ask-module-type-python))
+define ask-module-type-python
+	if command -v gum >/dev/null 2>&1; then \
+		SELECTED=$$(gum choose --header "Выберите тип Python проекта:" \
+			"UV (быстрый, рекомендуется)" \
+			"Poetry"); \
+		case "$$SELECTED" in \
+			"UV"*) echo "uv" ;; \
+			"Poetry") echo "poetry" ;; \
+		esac; \
+	else \
+		printf "$(COLOR_INFO)Выберите тип Python проекта:$(COLOR_RESET)\n"; \
+		printf "  1) UV (быстрый, рекомендуется)\n  2) Poetry\n"; \
+		printf "\n$(COLOR_INFO)Ваш выбор [1-2]:$(COLOR_RESET) "; \
+		read choice; \
+		case $$choice in \
+			1) echo "uv" ;; \
+			2) echo "poetry" ;; \
+			*) $(call log-error,Неверный выбор); exit 1 ;; \
+		esac; \
+	fi
+endef
+
+# Выбор типа Rust проекта
+# Возвращает: bin | lib | dioxus
+# Использование: TYPE=$$($(call ask-module-type-rust))
+define ask-module-type-rust
+	if command -v gum >/dev/null 2>&1; then \
+		SELECTED=$$(gum choose --header "Выберите тип Rust проекта:" \
+			"Binary (приложение)" \
+			"Library (библиотека)" \
+			"Dioxus (веб-приложение)"); \
+		case "$$SELECTED" in \
+			"Binary"*) echo "bin" ;; \
+			"Library"*) echo "lib" ;; \
+			"Dioxus"*) echo "dioxus" ;; \
+		esac; \
+	else \
+		printf "$(COLOR_INFO)Выберите тип Rust проекта:$(COLOR_RESET)\n"; \
+		printf "  1) Binary (приложение)\n  2) Library (библиотека)\n  3) Dioxus (веб-приложение)\n"; \
+		printf "\n$(COLOR_INFO)Ваш выбор [1-3]:$(COLOR_RESET) "; \
+		read choice; \
+		case $$choice in \
+			1) echo "bin" ;; \
+			2) echo "lib" ;; \
+			3) echo "dioxus" ;; \
+			*) $(call log-error,Неверный выбор); exit 1 ;; \
+		esac; \
+	fi
+endef
+
+# Ввод имени модуля с валидацией
+# Возвращает: имя модуля
+# Использование: NAME=$$($(call ask-module-name))
+define ask-module-name
+	if command -v gum >/dev/null 2>&1; then \
+		gum input --prompt "Введите имя модуля: " --placeholder "my-module"; \
+	else \
+		printf "$(COLOR_INFO)Введите имя модуля:$(COLOR_RESET) "; \
+		read name; \
+		echo "$$name"; \
+	fi
+endef
 
 # Вывод команд в табличном формате (для help)
 # Использование: $(call print-commands-table,pattern)

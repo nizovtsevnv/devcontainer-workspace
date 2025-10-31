@@ -16,24 +16,10 @@ module:
 
 	@# Выбор стека если не указан
 	@if [ -z "$(MODULE_STACK)" ]; then \
-		printf "\n$(COLOR_INFO)Выберите стек:$(COLOR_RESET)\n"; \
-		printf "  1) Node.js\n"; \
-		printf "  2) PHP\n"; \
-		printf "  3) Python\n"; \
-		printf "  4) Rust\n"; \
-		printf "\n$(COLOR_INFO)Ваш выбор [1-4]:$(COLOR_RESET) "; \
-		read choice; \
-		case $$choice in \
-			1) STACK="nodejs" ;; \
-			2) STACK="php" ;; \
-			3) STACK="python" ;; \
-			4) STACK="rust" ;; \
-			*) $(call log-error,Неверный выбор); exit 1 ;; \
-		esac; \
+		STACK=$$($(call ask-module-stack)); \
 	else \
 		STACK="$(MODULE_STACK)"; \
 	fi; \
-	\
 	$(MAKE) module-select-type-$$STACK
 
 # ===================================
@@ -43,91 +29,37 @@ module:
 .PHONY: module-select-type-nodejs
 module-select-type-nodejs:
 	@if [ -z "$(MODULE_TYPE)" ]; then \
-		printf "\n$(COLOR_INFO)Выберите тип Node.js проекта:$(COLOR_RESET)\n"; \
-		printf "  1) Bun (TypeScript)\n"; \
-		printf "  2) npm (TypeScript)\n"; \
-		printf "  3) pnpm (TypeScript)\n"; \
-		printf "  4) yarn (TypeScript)\n"; \
-		printf "  5) Next.js (TypeScript + Tailwind)\n"; \
-		printf "  6) Expo (TypeScript)\n"; \
-		printf "  7) SvelteKit (TypeScript)\n"; \
-		printf "\n$(COLOR_INFO)Ваш выбор [1-7]:$(COLOR_RESET) "; \
-		read choice; \
-		case $$choice in \
-			1) TYPE="bun" ;; \
-			2) TYPE="npm" ;; \
-			3) TYPE="pnpm" ;; \
-			4) TYPE="yarn" ;; \
-			5) TYPE="nextjs" ;; \
-			6) TYPE="expo" ;; \
-			7) TYPE="svelte" ;; \
-			*) $(call log-error,Неверный выбор); exit 1 ;; \
-		esac; \
+		TYPE=$$($(call ask-module-type-nodejs)); \
 	else \
 		TYPE="$(MODULE_TYPE)"; \
 	fi; \
-	\
 	$(MAKE) module-request-name STACK=nodejs TYPE=$$TYPE
 
 .PHONY: module-select-type-php
 module-select-type-php:
 	@if [ -z "$(MODULE_TYPE)" ]; then \
-		printf "\n$(COLOR_INFO)Выберите тип PHP проекта:$(COLOR_RESET)\n"; \
-		printf "  1) Composer library\n"; \
-		printf "  2) Composer project\n"; \
-		printf "  3) Laravel\n"; \
-		printf "\n$(COLOR_INFO)Ваш выбор [1-3]:$(COLOR_RESET) "; \
-		read choice; \
-		case $$choice in \
-			1) TYPE="composer-lib" ;; \
-			2) TYPE="composer-project" ;; \
-			3) TYPE="laravel" ;; \
-			*) $(call log-error,Неверный выбор); exit 1 ;; \
-		esac; \
+		TYPE=$$($(call ask-module-type-php)); \
 	else \
 		TYPE="$(MODULE_TYPE)"; \
 	fi; \
-	\
 	$(MAKE) module-request-name STACK=php TYPE=$$TYPE
 
 .PHONY: module-select-type-python
 module-select-type-python:
 	@if [ -z "$(MODULE_TYPE)" ]; then \
-		printf "\n$(COLOR_INFO)Выберите тип Python проекта:$(COLOR_RESET)\n"; \
-		printf "  1) UV (быстрый, рекомендуется)\n"; \
-		printf "  2) Poetry\n"; \
-		printf "\n$(COLOR_INFO)Ваш выбор [1-2]:$(COLOR_RESET) "; \
-		read choice; \
-		case $$choice in \
-			1) TYPE="uv" ;; \
-			2) TYPE="poetry" ;; \
-			*) $(call log-error,Неверный выбор); exit 1 ;; \
-		esac; \
+		TYPE=$$($(call ask-module-type-python)); \
 	else \
 		TYPE="$(MODULE_TYPE)"; \
 	fi; \
-	\
 	$(MAKE) module-request-name STACK=python TYPE=$$TYPE
 
 .PHONY: module-select-type-rust
 module-select-type-rust:
 	@if [ -z "$(MODULE_TYPE)" ]; then \
-		printf "\n$(COLOR_INFO)Выберите тип Rust проекта:$(COLOR_RESET)\n"; \
-		printf "  1) Binary (приложение)\n"; \
-		printf "  2) Library (библиотека)\n"; \
-		printf "  3) Dioxus (веб-приложение)\n"; \
-		printf "\n$(COLOR_INFO)Ваш выбор [1-3]:$(COLOR_RESET) "; \
-		read choice; \
-		case $$choice in \
-			1) TYPE="bin" ;; \
-			2) TYPE="lib" ;; \
-			3) TYPE="dioxus" ;; \
-			*) $(call log-error,Неверный выбор); exit 1 ;; \
-		esac; \
+		TYPE=$$($(call ask-module-type-rust)); \
 	else \
 		TYPE="$(MODULE_TYPE)"; \
 	fi; \
-	\
 	$(MAKE) module-request-name STACK=rust TYPE=$$TYPE
 
 # ===================================
@@ -137,17 +69,14 @@ module-select-type-rust:
 .PHONY: module-request-name
 module-request-name:
 	@if [ -z "$(MODULE_NAME)" ]; then \
-		printf "\n$(COLOR_INFO)Введите имя модуля:$(COLOR_RESET) "; \
-		read name; \
-		if [ -z "$$name" ]; then \
+		NAME=$$($(call ask-module-name)); \
+		if [ -z "$$NAME" ]; then \
 			$(call log-error,Имя не может быть пустым); \
 			exit 1; \
 		fi; \
-		NAME="$$name"; \
 	else \
 		NAME="$(MODULE_NAME)"; \
 	fi; \
-	\
 	$(MAKE) module-validate-and-create STACK=$(STACK) TYPE=$(TYPE) NAME=$$NAME
 
 # ===================================
@@ -166,6 +95,19 @@ module-validate-and-create:
 	@if [ -d "$(MODULE_TARGET)/$(NAME)" ]; then \
 		$(call log-error,Модуль $(NAME) уже существует в $(MODULE_TARGET)/); \
 		exit 1; \
+	fi
+
+	@# Показать сводку и запросить подтверждение
+	@printf "\n"; \
+	$(call log-info,Будет создан модуль:); \
+	printf "  Стек:  $(STACK)\n"; \
+	printf "  Тип:   $(TYPE)\n"; \
+	printf "  Имя:   $(NAME)\n"; \
+	printf "  Путь:  $(MODULE_TARGET)/$(NAME)\n"; \
+	printf "\n"; \
+	if ! $(call ask-confirm,Создать модуль); then \
+		$(call log-info,Отменено пользователем); \
+		exit 0; \
 	fi
 
 	@# Создание директории если не существует (выполняется в контейнере для корректных прав)
