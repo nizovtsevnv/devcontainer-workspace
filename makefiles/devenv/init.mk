@@ -3,11 +3,13 @@
 # ===================================
 
 .PHONY: devenv-init-internal
+.ONESHELL:
 
 devenv-init-internal:
+	@set -e
 	@$(call log-section,Инициализация проекта)
-	@$(call check-project-init-status); \
-	if [ "$$STATUS" = "инициализирован" ]; then \
+	@$(call check-project-init-status)
+	@if [ "$$STATUS" = "инициализирован" ]; then \
 		$(call log-error,Проект уже инициализирован); \
 		$(call log-info,Remote 'template' уже существует); \
 		exit 1; \
