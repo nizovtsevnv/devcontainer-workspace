@@ -8,12 +8,31 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Загружаем библиотеки
 . "$SCRIPT_DIR/lib/ui.sh"
+. "$SCRIPT_DIR/lib/git.sh"
 . "$SCRIPT_DIR/lib/modules.sh"
 
 # ===================================
 # Версии инструментов в контейнере
 # ===================================
 
+log_info "Версии шаблона и образа:"
+
+# Полная версия из .template-version или git
+template_full=$(get_template_version)
+
+# Базовая версия для Docker образа (редуцированная)
+template_base=$(echo "$template_full" | sed 's/-[0-9]*-g.*//')
+
+# Если версии разные, показываем обе
+if [ "$template_full" != "$template_base" ]; then
+	printf "  ${COLOR_SUCCESS}%-20s${COLOR_RESET} %s ${COLOR_DIM}(код из %s)${COLOR_RESET}\n" "Шаблон" "$template_base" "$template_full"
+else
+	printf "  ${COLOR_SUCCESS}%-20s${COLOR_RESET} %s\n" "Шаблон" "$template_full"
+fi
+
+printf "  ${COLOR_SUCCESS}%-20s${COLOR_RESET} %s\n" "Docker образ" "$CONTAINER_IMAGE"
+
+printf "\n"
 log_info "Версии инструментов в контейнере:"
 
 docker_ver=$(docker --version 2>/dev/null | awk '{print $3}' | sed 's/,$//' || echo "не установлен")

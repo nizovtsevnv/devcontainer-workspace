@@ -34,9 +34,11 @@ export HOST_GID := $(shell id -g)
 WORKSPACE_BASENAME := $(shell basename "$(WORKSPACE_ROOT)")
 CONTAINER_NAME := $(WORKSPACE_BASENAME)-devcontainer
 # Автоопределение версии шаблона и образа
+# Редуцируем версию до базовой (X.Y.Z) для Docker образа
+# Полная версия (X.Y.Z-N-gXXX) сохраняется в .template-version для точного отслеживания
 TEMPLATE_VERSION := $(shell \
 	if [ -f .template-version ]; then \
-		cat .template-version 2>/dev/null | sed 's/^v//' || echo "latest"; \
+		cat .template-version 2>/dev/null | sed 's/^v//' | sed 's/-[0-9]*-g.*//' || echo "latest"; \
 	else \
 		VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null || git describe --tags 2>/dev/null || echo ""); \
 		if [ -n "$$VERSION" ]; then \
