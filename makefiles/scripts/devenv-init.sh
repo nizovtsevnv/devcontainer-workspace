@@ -79,10 +79,7 @@ else
 	temp_dir=$(mktemp -d /tmp/devenv-init.XXXXXX)
 
 	if ! show_spinner "Клонирование репозитория" git clone -q "$origin_url" "$temp_dir" 2>&1; then
-		printf "\n"
 		rm -rf "$temp_dir"
-		log_error "Не удалось клонировать репозиторий"
-		log_info "Проверьте URL и доступ к репозиторию"
 		exit 1
 	fi
 
