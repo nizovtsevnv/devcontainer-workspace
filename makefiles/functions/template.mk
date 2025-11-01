@@ -77,14 +77,9 @@ define auto-resolve-template-conflicts
 	fi
 endef
 
-# Создать README.md проекта (интерактивно)
+# Создать README.md проекта автоматически
 # Использование: @$(call create-project-readme)
 define create-project-readme
-	printf "\n"; \
-	$(call ask-confirm-default-yes,Создать README.md проекта?) || { \
-		$(call log-info,README.md не создан (можно создать позже)); \
-		exit 0; \
-	}; \
 	if [ -f "README.project.md" ]; then \
 		cp README.project.md README.md; \
 		$(call log-success,README.md создан из шаблона); \

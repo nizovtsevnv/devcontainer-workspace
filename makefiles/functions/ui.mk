@@ -114,26 +114,19 @@ endef
 # Интерактивные функции
 # ===================================
 
-# Запрос подтверждения (дефолт: NO)
-# Использование: $(call ask-confirm,message)
-define ask-confirm
-	printf "$(COLOR_WARNING)? $(COLOR_RESET)%s $(COLOR_INFO)[y/N]$(COLOR_RESET): " "$(1)" >&2; \
-	read -r answer </dev/tty; \
-	case "$$answer" in \
-		[Yy]|[Yy][Ee][Ss]) printf "$(COLOR_SUCCESS)✓ Продолжаем$(COLOR_RESET)\n" >&2 ;; \
-		*) printf "$(COLOR_INFO)ℹ Отменено$(COLOR_RESET)\n" >&2; exit 1 ;; \
-	esac
-endef
-
-# Запрос подтверждения (дефолт: YES)
-# Использование: $(call ask-confirm-default-yes,message)
-define ask-confirm-default-yes
-	printf "$(COLOR_WARNING)? $(COLOR_RESET)%s $(COLOR_SUCCESS)[Y/n]$(COLOR_RESET): " "$(1)" >&2; \
-	read -r answer </dev/tty; \
-	case "$$answer" in \
-		[Nn]|[Nn][Oo]) printf "$(COLOR_INFO)ℹ Отменено$(COLOR_RESET)\n" >&2; exit 1 ;; \
-		*) printf "$(COLOR_SUCCESS)✓ Продолжаем$(COLOR_RESET)\n" >&2 ;; \
-	esac
+# Запрос подтверждения через меню выбора
+# Параметр: $(1) - вопрос
+# Возвращает: exit 0 если "Да", exit 1 если "Нет" или ESC
+# Использование: @$(call ask-yes-no,Продолжить?)
+define ask-yes-no
+	printf "$(COLOR_WARNING)? $(COLOR_RESET)%s\n" "$(1)" >&2; \
+	CHOICE=$$(sh makefiles/scripts/select-menu.sh "Да" "Нет") || exit 1; \
+	if [ "$$CHOICE" = "Да" ]; then \
+		printf "$(COLOR_SUCCESS)✓ Продолжаем$(COLOR_RESET)\n" >&2; \
+	else \
+		printf "$(COLOR_INFO)ℹ Отменено$(COLOR_RESET)\n" >&2; \
+		exit 1; \
+	fi
 endef
 
 # Запросить текстовый ввод от пользователя

@@ -91,7 +91,7 @@ devenv-update-project:
 	git diff --cached --stat --color=always; \
 	printf "\n"; \
 	\
-	$(call ask-confirm,Создать коммит обновления шаблона?) || { \
+	$(call ask-yes-no,Создать коммит обновления шаблона?) || { \
 		printf "\n"; \
 		$(call log-info,Обновление завершено без коммита); \
 		printf "  Новая версия: $$NEW_VERSION\n"; \

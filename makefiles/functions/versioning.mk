@@ -42,7 +42,7 @@ endef
 # Использование: @$(call save-template-version,1.0.0)
 define save-template-version
 	echo "$(1)" > .template-version; \
-	git add .template-version
+	git add -f .template-version 2>/dev/null || true
 endef
 
 # Показать changelog между двумя версиями

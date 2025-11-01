@@ -12,27 +12,19 @@ devenv-init-internal:
 		$(call log-info,Remote 'template' уже существует); \
 		exit 1; \
 	fi
-	@$(call ask-confirm,Шаблон будет переведён в режим проекта - это действие необратимо - продолжить?)
+	@$(call ask-yes-no,Шаблон будет переведён в режим проекта - это действие необратимо - продолжить?)
 
-	@# Проверка версии и автоматический checkout на последний тег
-	@CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null); \
-	if [ -z "$$CURRENT_VERSION" ]; then \
-		$(call log-warning,HEAD не на tagged коммите); \
-		LATEST_TAG=$$($(call get-latest-semantic-tag)); \
-		if [ -z "$$LATEST_TAG" ]; then \
-			$(call log-error,Теги не найдены в репозитории); \
-			$(call log-info,Убедитесь что вы клонировали репозиторий с тегами); \
-			exit 1; \
-		fi; \
-		$(call log-info,Автоматическое переключение на: $$LATEST_TAG); \
-		git checkout -q "$$LATEST_TAG"; \
-		CURRENT_VERSION="$$LATEST_TAG"; \
-	else \
-		$(call log-info,Текущая версия: $$CURRENT_VERSION); \
+	@# Определение версии шаблона
+	@CURRENT_VERSION=$$(git describe --tags 2>/dev/null || echo "unknown"); \
+	if [ "$$CURRENT_VERSION" = "unknown" ]; then \
+		$(call log-error,Не удалось определить версию шаблона); \
+		$(call log-info,Убедитесь что вы клонировали репозиторий с тегами: git clone --tags); \
+		exit 1; \
 	fi; \
-	CURRENT_VERSION_CLEAN=$$(echo "$$CURRENT_VERSION" | sed 's/^v//'); \
+	$(call log-info,Версия шаблона: $$CURRENT_VERSION); \
+	CURRENT_VERSION_CLEAN=$$(echo "$$CURRENT_VERSION" | sed 's/^v//' | cut -d'-' -f1); \
 	$(call save-template-version,$$CURRENT_VERSION_CLEAN); \
-	$(call log-success,Версия шаблона: $$CURRENT_VERSION_CLEAN)
+	$(call log-success,Сохранена версия: $$CURRENT_VERSION_CLEAN)
 
 	@# Удаление файлов шаблона
 	@$(call log-info,Удаление файлов шаблона...)
@@ -46,8 +38,6 @@ devenv-init-internal:
 		$(call log-info,Убедитесь что вы клонировали шаблон через git clone); \
 		exit 1; \
 	fi; \
-	$(call log-info,Сохранён URL шаблона: $$TEMPLATE_URL); \
-	\
 	rm -rf .git; \
 	$(call log-warning,Удалена история шаблона (.git/)); \
 	\
@@ -55,17 +45,21 @@ devenv-init-internal:
 	$(call log-success,Создан новый репозиторий); \
 	\
 	git remote add template "$$TEMPLATE_URL"; \
-	$(call log-success,Добавлен remote 'template'); \
+	$(call log-success,Установлен git remote 'template'\: $$TEMPLATE_URL); \
 	\
 	git fetch template --tags --force >/dev/null 2>&1 || true; \
 	$(call log-success,Получены теги из template)
 
 	@# Интерактивный выбор нового origin
 	@printf "\n"; \
-	NEW_ORIGIN=$$($(call ask-input-with-default,,URL нового origin? [Enter для skip])); \
+	$(call ask-yes-no,Указать удалённый Git URL?) || { \
+		$(call log-info,Remote 'origin' не настроен \(можно добавить позже\)); \
+		exit 0; \
+	}; \
+	NEW_ORIGIN=$$($(call ask-input-with-default,,URL удалённого репозитория)); \
 	if [ -n "$$NEW_ORIGIN" ]; then \
 		git remote add origin "$$NEW_ORIGIN"; \
-		$(call log-success,Добавлен remote 'origin'\: $$NEW_ORIGIN); \
+		$(call log-success,Установлен git remote 'origin'\: $$NEW_ORIGIN); \
 	else \
 		$(call log-info,Remote 'origin' не настроен \(можно добавить позже\)); \
 	fi
@@ -90,7 +84,10 @@ devenv-init-internal:
 
 	@# Initial commit
 	@printf "\n"; \
-	$(call ask-confirm-default-yes,Создать initial commit)
+	$(call ask-yes-no,Создать initial commit?) || { \
+		$(call log-info,Initial commit пропущен - можно создать вручную); \
+		exit 0; \
+	}
 	@git add . 2>/dev/null || true
 	@git commit -m "chore: initialize project from devcontainer-workspace template" 2>/dev/null || true
 	@$(call log-success,Initial commit создан)
