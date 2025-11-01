@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Загружаем библиотеки
 . "$SCRIPT_DIR/lib/ui.sh"
+. "$SCRIPT_DIR/lib/container.sh"
 
 # Директория для тестов
 TEST_DIR="${TEST_DIR:-/tmp/devcontainer-workspace}"
@@ -53,7 +54,7 @@ printf "\n"
 
 # CONTAINER ENVIRONMENT
 log_info "Контейнерная среда:"
-container_info=$(make exec 'U=$(id -u); G=$(id -g); USR=$(whoami); D=$(pwd); echo "$U|$G|$USR|$D"' 2>/dev/null)
+container_info=$(container_exec 'U=$(id -u); G=$(id -g); USR=$(whoami); D=$(pwd); echo "$U|$G|$USR|$D"' 2>/dev/null)
 uid=$(echo "$container_info" | cut -d'|' -f1)
 gid=$(echo "$container_info" | cut -d'|' -f2)
 user=$(echo "$container_info" | cut -d'|' -f3)
@@ -90,7 +91,7 @@ log_section "Тестирование базовых команд"
 
 run_test "make up" sh -c "make --no-print-directory up >/dev/null 2>&1 && docker ps --format '{{.Names}}' | grep -q '^.*-devcontainer$' || podman ps --format '{{.Names}}' | grep -q '^.*-devcontainer$'"
 
-run_test "make exec" sh -c "make --no-print-directory exec 'echo test-output' 2>/dev/null | grep -q 'test-output'"
+run_test "container exec" sh -c "container_exec 'echo test-output' 2>/dev/null | grep -q 'test-output'"
 
 run_test "make version" sh -c "make --no-print-directory version 2>/dev/null | grep -q 'Node.js'"
 
@@ -100,33 +101,33 @@ run_test "Контейнер работает" sh -c "docker ps --format '{{.Nam
 printf "\n"
 log_section "Тестирование прав доступа"
 
-run_test "Создание файла в контейнере" make --no-print-directory exec "touch $TEST_DIR/perm-test.txt" >/dev/null 2>&1
+run_test "Создание файла в контейнере" container_exec "touch $TEST_DIR/perm-test.txt" >/dev/null 2>&1
 
-run_test "Запись файла работает" make --no-print-directory exec "echo write-test > $TEST_DIR/perm-test.txt" >/dev/null 2>&1
+run_test "Запись файла работает" container_exec "echo write-test > $TEST_DIR/perm-test.txt" >/dev/null 2>&1
 
-run_test "Чтение файла работает" sh -c "make --no-print-directory exec 'cat $TEST_DIR/perm-test.txt' 2>/dev/null | grep -q 'write-test'"
+run_test "Чтение файла работает" sh -c "container_exec 'cat $TEST_DIR/perm-test.txt' 2>/dev/null | grep -q 'write-test'"
 
-run_test "Перезапись файла работает" sh -c "make --no-print-directory exec 'echo rewrite-test > $TEST_DIR/perm-test.txt && cat $TEST_DIR/perm-test.txt' 2>/dev/null | grep -q 'rewrite-test'"
+run_test "Перезапись файла работает" sh -c "container_exec 'echo rewrite-test > $TEST_DIR/perm-test.txt && cat $TEST_DIR/perm-test.txt' 2>/dev/null | grep -q 'rewrite-test'"
 
 # Тестирование технологических стеков
 printf "\n"
 log_section "Тестирование команд внутри модулей в контейнере"
 
-run_test "test-nodejs / npm install" make --no-print-directory exec "cd $TEST_DIR/modules/test-nodejs && npm install --silent" >/dev/null 2>&1
+run_test "test-nodejs / npm install" container_exec "cd $TEST_DIR/modules/test-nodejs && npm install --silent" >/dev/null 2>&1
 
-run_test "test-nodejs / npm test" sh -c "make --no-print-directory exec 'cd $TEST_DIR/modules/test-nodejs && npm test' 2>&1 | grep -q 'nodejs test passed'"
+run_test "test-nodejs / npm test" sh -c "container_exec 'cd $TEST_DIR/modules/test-nodejs && npm test' 2>&1 | grep -q 'nodejs test passed'"
 
-run_test "test-nodejs / npm run build" sh -c "make --no-print-directory exec 'cd $TEST_DIR/modules/test-nodejs && npm run build' 2>&1 | grep -q 'nodejs build passed'"
+run_test "test-nodejs / npm run build" sh -c "container_exec 'cd $TEST_DIR/modules/test-nodejs && npm run build' 2>&1 | grep -q 'nodejs build passed'"
 
-run_test "test-php / composer install" make --no-print-directory exec "cd $TEST_DIR/modules/test-php && composer install --quiet" >/dev/null 2>&1
+run_test "test-php / composer install" container_exec "cd $TEST_DIR/modules/test-php && composer install --quiet" >/dev/null 2>&1
 
-run_test "test-php / composer test" sh -c "make --no-print-directory exec 'cd $TEST_DIR/modules/test-php && composer test' 2>&1 | grep -q 'php test passed'"
+run_test "test-php / composer test" sh -c "container_exec 'cd $TEST_DIR/modules/test-php && composer test' 2>&1 | grep -q 'php test passed'"
 
-run_test "test-python / pytest" make --no-print-directory exec "cd $TEST_DIR/modules/test-python && pytest -q tests/test_main.py" >/dev/null 2>&1
+run_test "test-python / pytest" container_exec "cd $TEST_DIR/modules/test-python && pytest -q tests/test_main.py" >/dev/null 2>&1
 
-run_test "test-rust / cargo build" make --no-print-directory exec "cd $TEST_DIR/modules/test-rust && cargo build --quiet" >/dev/null 2>&1
+run_test "test-rust / cargo build" container_exec "cd $TEST_DIR/modules/test-rust && cargo build --quiet" >/dev/null 2>&1
 
-run_test "test-rust / cargo test" make --no-print-directory exec "cd $TEST_DIR/modules/test-rust && cargo test --quiet" >/dev/null 2>&1
+run_test "test-rust / cargo test" container_exec "cd $TEST_DIR/modules/test-rust && cargo test --quiet" >/dev/null 2>&1
 
 # Остановка тестового контейнера
 printf "\n"

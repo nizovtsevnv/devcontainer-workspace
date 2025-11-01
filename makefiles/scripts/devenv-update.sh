@@ -11,6 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/lib/ui.sh"
 . "$SCRIPT_DIR/lib/git.sh"
 . "$SCRIPT_DIR/lib/template.sh"
+. "$SCRIPT_DIR/lib/container.sh"
 
 # ===================================
 # Основная логика
@@ -33,12 +34,7 @@ if [ "$STATUS" = "инициализирован" ]; then
 	fi
 
 	# Остановить контейнер если запущен
-	# (вызываем через Make, т.к. это Make-специфичная логика)
-	if command -v make >/dev/null 2>&1; then
-		if make --no-print-directory stop-container-if-running 2>/dev/null; then
-			:
-		fi
-	fi
+	stop_container_if_running 2>/dev/null || true
 
 	# Fetch обновлений
 	git fetch template --tags --force >/dev/null 2>&1 || true
@@ -143,9 +139,7 @@ if [ "$STATUS" = "инициализирован" ]; then
 	fi
 
 	# Обновить Docker образ и пересоздать контейнер
-	if command -v make >/dev/null 2>&1; then
-		make --no-print-directory update-container-image 2>/dev/null || true
-	fi
+	update_container_image 2>/dev/null || true
 
 else
 	# ===========================================
@@ -159,11 +153,7 @@ else
 	fi
 
 	# Остановить контейнер если запущен
-	if command -v make >/dev/null 2>&1; then
-		if make --no-print-directory stop-container-if-running 2>/dev/null; then
-			:
-		fi
-	fi
+	stop_container_if_running 2>/dev/null || true
 
 	# Определить текущую ветку
 	current_branch=$(git branch --show-current)
@@ -184,7 +174,5 @@ else
 	printf "  Версия шаблона: %s\n" "$template_version"
 
 	# Обновить Docker образ и пересоздать контейнер
-	if command -v make >/dev/null 2>&1; then
-		make --no-print-directory update-container-image 2>/dev/null || true
-	fi
+	update_container_image 2>/dev/null || true
 fi

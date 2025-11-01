@@ -53,11 +53,16 @@ print_table() {
 	while IFS= read -r line; do
 		# Разбиваем строки по <ROW>
 		echo "$line"
-	done | sed 's/<ROW>/\n/g' | while IFS=$'\x1F' read -r key value; do
-		# Разбиваем колонки по <COL>
-		line_data=$(echo "$key" | sed 's/<COL>/\x1F/')
-		key=$(echo "$line_data" | cut -d$'\x1F' -f1)
-		value=$(echo "$line_data" | cut -d$'\x1F' -f2-)
+	done | sed 's/<ROW>/\n/g' | while read -r row_data; do
+		# Пропускаем пустые строки
+		[ -z "$row_data" ] && continue
+
+		# Разбиваем колонки по <COL> используя POSIX-совместимый подход
+		key=$(echo "$row_data" | sed 's/<COL>.*//')
+		value=$(echo "$row_data" | sed 's/^[^<]*<COL>//')
+
+		# Убираем оставшиеся маркеры из value
+		value=$(echo "$value" | sed 's/<ROW>//g')
 
 		key_len=$(echo -n "$key" | wc -m)
 		padding=$((col_width - key_len))

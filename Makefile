@@ -16,18 +16,11 @@
 MAKEFLAGS += --no-print-directory
 
 # Подключение модулей в правильном порядке
-# Порядок важен: сначала config, потом functions (все), detect, остальные - в любом порядке
+# Порядок важен: сначала config, core, modules, devenv, help
 include makefiles/config.mk
-include makefiles/functions/ui.mk
-include makefiles/functions/versioning.mk
-include makefiles/functions/template.mk
-include makefiles/functions/container.mk
-include makefiles/modules/detect.mk
 include makefiles/core.mk
-include makefiles/modules/commands.mk
-include makefiles/modules/create.mk
-include makefiles/devenv/main.mk
-include makefiles/devenv/test.mk
+include makefiles/modules.mk
+include makefiles/devenv.mk
 include makefiles/help.mk
 
 # Универсальное правило для подавления ошибок о несуществующих targets

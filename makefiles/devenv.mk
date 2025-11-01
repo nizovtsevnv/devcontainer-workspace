@@ -1,0 +1,63 @@
+# ===================================
+# Управление шаблоном DevContainer Workspace
+# ===================================
+
+.PHONY: devenv devenv-init-internal devenv-test-internal devenv-status-internal devenv-update-internal
+
+# Получить подкоманду (первый аргумент после devenv)
+DEVENV_CMD := $(word 2,$(MAKECMDGOALS))
+
+## devenv: Команды управления шаблоном (init, test, status, update)
+devenv:
+	@if [ -z "$(DEVENV_CMD)" ]; then \
+		printf "$(COLOR_INFO)ℹ$(COLOR_RESET) Команды управления шаблоном проекта:\n"; \
+		printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv init" "Инициализация проекта из шаблона"; \
+		printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv test" "Запустить автотесты (только для разработки)"; \
+		printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv status" "Текущий статус и версия шаблона"; \
+		printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv update" "Обновить версию шаблона"; \
+	elif [ "$(DEVENV_CMD)" = "init" ]; then \
+		$(MAKE) devenv-init-internal; \
+	elif [ "$(DEVENV_CMD)" = "test" ]; then \
+		$(MAKE) devenv-test-internal; \
+	elif [ "$(DEVENV_CMD)" = "status" ]; then \
+		$(MAKE) devenv-status-internal; \
+	elif [ "$(DEVENV_CMD)" = "update" ]; then \
+		$(MAKE) devenv-update-internal; \
+	else \
+		printf "$(COLOR_ERROR)✗$(COLOR_RESET) Неизвестная подкоманда: $(DEVENV_CMD)\n" >&2; \
+		printf "$(COLOR_INFO)ℹ$(COLOR_RESET) Доступны: init, test, status, update\n"; \
+		exit 1; \
+	fi
+
+# Stub targets для подавления ошибок Make при вызове `make devenv init/test/status/update`
+.PHONY: init test status update
+init test status update:
+	@:
+
+# ===================================
+# Команда: devenv init
+# ===================================
+
+devenv-init-internal:
+	@$(call run-script,makefiles/scripts/devenv-init.sh)
+
+# ===================================
+# Команда: devenv test
+# ===================================
+
+devenv-test-internal:
+	@$(call run-script,makefiles/scripts/devenv-test.sh)
+
+# ===================================
+# Команда: devenv status
+# ===================================
+
+devenv-status-internal:
+	@$(call run-script,makefiles/scripts/devenv-status.sh)
+
+# ===================================
+# Команда: devenv update
+# ===================================
+
+devenv-update-internal:
+	@$(call run-script,makefiles/scripts/devenv-update.sh)

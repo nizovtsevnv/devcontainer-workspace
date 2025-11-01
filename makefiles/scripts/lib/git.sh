@@ -11,10 +11,27 @@
 # Использование: version=$(get_template_version)
 get_template_version() {
 	if [ -f .template-version ]; then
-		cat .template-version 2>/dev/null | sed 's/^v//' || echo "unknown"
+		version=$(cat .template-version 2>/dev/null | sed 's/^v//')
+		if [ -n "$version" ]; then
+			echo "$version"
+		else
+			echo "unknown"
+		fi
 	else
-		git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//' || \
-		git describe --tags 2>/dev/null | sed 's/^v//' || \
+		# Сначала пробуем exact match
+		version=$(git describe --tags --exact-match HEAD 2>/dev/null | sed 's/^v//')
+		if [ -n "$version" ]; then
+			echo "$version"
+			return
+		fi
+
+		# Затем пробуем обычный describe
+		version=$(git describe --tags 2>/dev/null | sed 's/^v//')
+		if [ -n "$version" ]; then
+			echo "$version"
+			return
+		fi
+
 		echo "unknown"
 	fi
 }

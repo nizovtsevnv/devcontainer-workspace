@@ -8,7 +8,6 @@
 - [Глобальные команды](#глобальные-команды)
 - [Команды модулей](#команды-модулей)
 - [Создание Makefile модуля](#создание-makefile-модуля)
-- [Переиспользуемые функции](#переиспользуемые-функции)
 - [Архитектура](#архитектура)
 
 ## Быстрый старт
@@ -334,10 +333,6 @@ make ml-service uv pip install fastapi
 ```makefile
 # modules/myservice/Makefile
 
-# Подключение переиспользуемых функций workspace (опционально)
-WORKSPACE_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null)
--include $(WORKSPACE_ROOT)/makefiles/functions.mk
-
 .DEFAULT_GOAL := help
 
 ## test: Запуск тестов
@@ -367,39 +362,6 @@ help:
 		awk 'BEGIN {FS = ": "}; {printf "  %-12s %s\n", $$1, $$2}'
 ```
 
-### С использованием функций workspace
-
-```makefile
-# modules/myservice/Makefile
-
-WORKSPACE_ROOT := $(shell git rev-parse --show-toplevel 2>/dev/null)
--include $(WORKSPACE_ROOT)/makefiles/functions.mk
-
-.DEFAULT_GOAL := help
-
-## test: Запуск тестов
-test:
-	@$(call log-info,Запуск тестов myservice)
-	@npm test && $(call log-success,Тесты пройдены) || $(call log-error,Тесты провалились)
-
-## build: Сборка проекта
-build:
-	@$(call log-section,Сборка myservice)
-	@npm run build
-	@$(call log-success,Сборка завершена)
-
-## lint: Линтинг кода
-lint:
-	@$(call log-info,Линтинг myservice)
-	@eslint src/
-
-## help: Показать эту справку
-help:
-	@$(call log-section,Команды myservice)
-	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/^## //' | \
-		awk 'BEGIN {FS = ": "}; {printf "  %-12s %s\n", $$1, $$2}'
-```
-
 ### Рекомендуемые команды
 
 Для единообразия рекомендуется реализовывать следующие команды в модулях:
@@ -414,120 +376,38 @@ help:
 
 Каждый модуль решает сам, какие команды ему нужны.
 
-## Переиспользуемые функции
-
-Workspace предоставляет функции для использования в Makefile модулей.
-
-### Интерактивные функции
-
-Система предоставляет pure shell реализации интерактивных UI функций (без зависимостей от внешних инструментов):
-
-```makefile
-# Запрос подтверждения с дефолтом NO
-@$(call ask-confirm,Удалить файлы?)
-# Выводит: "? Удалить файлы? [y/N]:"
-
-# Запрос подтверждения с дефолтом YES
-@$(call ask-confirm-default-yes,Продолжить установку?)
-# Выводит: "? Продолжить установку? [Y/n]:"
-
-# Текстовый ввод с placeholder
-VERSION=$$($(call ask-input,v1.0.0,Введите версию))
-
-# Текстовый ввод с дефолтным значением
-URL=$$($(call ask-input-with-default,https://example.com,Введите URL))
-
-# Выбор из списка (меню со стрелками ↑↓)
-STACK=$$($(call ask-choose,Выберите технологию,nodejs python rust php))
-
-# Выбор с предустановленным значением
-VERSION=$$($(call ask-choose-single,Выберите версию,v1.2.3,v1.2.3 v1.2.2 v1.2.1))
-
-# Спиннер при выполнении команды
-@$(call log-spinner,Установка зависимостей,npm install)
-# Показывает анимированный спиннер ◐◓◑◒ во время выполнения
-# При успехе: ✓ Установка зависимостей
-# При ошибке: ✗ Установка зависимостей + вывод ошибки
-```
-
-**Особенности:**
-- Все функции работают как на хосте, так и в контейнере
-- Не требуют установки внешних инструментов (используют только POSIX shell)
-- Используют чистый POSIX shell и ANSI escape коды
-- Меню навигации работает через клавиши ↑↓ и Enter, ESC для отмены
-
-### Логирование
-
-```makefile
-# Информационное сообщение (синий цвет)
-@$(call log-info,Установка зависимостей)
-
-# Успешное выполнение (зелёный цвет)
-@$(call log-success,Тесты пройдены)
-
-# Предупреждение (жёлтый цвет)
-@$(call log-warning,Старая версия Node.js)
-
-# Ошибка (красный цвет)
-@$(call log-error,Тесты провалились)
-
-# Заголовок секции (магента)
-@$(call log-section,Сборка проекта)
-```
-
-**Важно:** Добавляйте `@` перед `$(call ...)` чтобы не выводить саму команду, только результат.
-
-### Утилиты
-
-```makefile
-# Проверка обязательной переменной
-@$(call require-var,API_KEY)
-
-# Запрос подтверждения (дефолт: NO)
-@$(call ask-confirm,Удалить данные)
-# Выводит: "Удалить данные? [yes/NO]:"
-
-# Запрос подтверждения (дефолт: YES)
-@$(call ask-confirm-default-yes,Продолжить)
-# Выводит: "Продолжить? [YES/no]:"
-
-# Проверка существования команды
-@$(call check-command,npm)
-```
-
-### Примеры использования
-
-```makefile
-deploy:
-	@$(call require-var,DEPLOY_ENV)
-	@$(call check-command,kubectl)
-	@$(call ask-confirm,Задеплоить на $(DEPLOY_ENV))
-	@$(call log-section,Деплой на $(DEPLOY_ENV))
-	@kubectl apply -f deploy/$(DEPLOY_ENV)/
-	@$(call log-success,Деплой завершён)
-```
-
 ## Архитектура
+
+> **Примечание:** Ранее workspace предоставлял переиспользуемые Make-функции (log-*, ask-*, check-command) через `makefiles/functions.mk`. Эти функции были перенесены в shell-скрипты (`makefiles/scripts/lib/`) для лучшей модульности и поддерживаемости. Модули должны использовать стандартные возможности Make и shell (echo, printf) для вывода информации.
 
 ### Структура файлов
 
 ```
-Makefile                      # Главный файл
+Makefile                          # Главный файл
 makefiles/
-├── config.mk                # Конфигурация, переменные
-├── functions.mk             # Переиспользуемые функции
-├── core.mk                  # Базовые команды (up, down, sh, exec, version)
-├── help.mk                  # Система справки
-├── devenv/                  # Управление шаблоном DevContainer Workspace
-│   ├── main.mk              # Диспетчер подкоманд devenv (init, test, status, update)
-│   ├── init.mk              # Инициализация проекта из шаблона
-│   ├── status.mk            # Проверка статуса и версии шаблона
-│   ├── update.mk            # Обновление шаблона из upstream
-│   └── test.mk              # Автотесты шаблона
-└── modules/                 # Работа с модулями проекта
-    ├── detect.mk            # Автоопределение технологий и пакетных менеджеров
-    ├── commands.mk          # Динамические команды модулей
-    └── create.mk            # Создание новых модулей
+├── config.mk                    # Конфигурация, переменные, универсальная функция run-script
+├── core.mk                      # Базовые команды (делегируют в scripts)
+├── devenv.mk                    # Управление шаблоном (делегирует в scripts)
+├── modules.mk                   # Работа с модулями (делегирует в scripts)
+├── help.mk                      # Система справки
+└── scripts/                     # Вся бизнес-логика в shell-скриптах
+    ├── lib/                     # Переиспользуемые библиотеки
+    │   ├── ui.sh               # Функции UI (логирование, интерактив)
+    │   ├── container.sh        # Работа с контейнером
+    │   ├── git.sh              # Git операции
+    │   ├── template.sh         # Операции с шаблоном
+    │   └── modules.sh          # Операции с модулями
+    ├── container-up.sh          # Запуск контейнера
+    ├── container-down.sh        # Остановка контейнера
+    ├── container-sh.sh          # Интерактивный shell
+    ├── container-exec.sh        # Выполнение команды в контейнере
+    ├── devenv-init.sh           # Инициализация проекта из шаблона
+    ├── devenv-status.sh         # Проверка статуса шаблона
+    ├── devenv-test.sh           # Автотесты шаблона
+    ├── devenv-update.sh         # Обновление шаблона
+    ├── module-create.sh         # Создание новых модулей
+    ├── module-command.sh        # Выполнение команд модулей
+    └── version.sh               # Вывод версий инструментов
 ```
 
 ### Принципы работы
