@@ -37,10 +37,28 @@ if [ "$STATUS" = "инициализирован" ]; then
 	stop_container_if_running 2>/dev/null || true
 
 	# Fetch обновлений
-	git fetch template --tags --force >/dev/null 2>&1 || true
+	show_spinner "Проверка обновлений из template" git fetch template --tags --force 2>&1 || true
 
 	# Определить текущую и последнюю версии
 	current_version=$(get_template_version)
+
+	# Проверить, содержит ли версия дополнительные коммиты (-N-gXXX)
+	# Если в .template-version только базовая версия (например 0.4.0),
+	# а есть файлы из более новых коммитов, это может привести к конфликтам
+	if ! echo "$current_version" | grep -q -- '-'; then
+		# Версия базовая (без -N-gXXX)
+		# Проверим последний коммит template merge
+		last_merge=$(git log --grep="devenv template" --format="%H" -1 2>/dev/null)
+		if [ -n "$last_merge" ]; then
+			# Попробуем определить точную версию из этого коммита
+			merge_version=$(git describe --tags "$last_merge" 2>/dev/null | sed 's/^v//' || echo "")
+			if [ -n "$merge_version" ] && [ "$merge_version" != "$current_version" ]; then
+				log_warning "В .template-version базовая версия $current_version, но код из $merge_version"
+				log_info "Рекомендуется обновиться на последнюю версию для избежания конфликтов"
+			fi
+		fi
+	fi
+
 	latest_version=$(get_latest_semantic_tag)
 	latest_version_clean=$(echo "$latest_version" | sed 's/^v//')
 
@@ -53,13 +71,25 @@ if [ "$STATUS" = "инициализирован" ]; then
 	show_changelog "$current_version" "$latest_version"
 	printf "\n"
 
-	# Интерактивный выбор версии
+	# Интерактивный выбор версии (последние 5 версий)
 	all_tags=$(get_all_semantic_tags)
-	version_options=$(echo "$all_tags" | sed 's/^v//g' | tac | tr '\n' ' ')
+	version_options=$(echo "$all_tags" | sed 's/^v//g' | tail -5 | tac | tr '\n' ' ')
 
 	log_section "Выберите версию для обновления:"
-	printf "${COLOR_INFO}(по умолчанию: %s, используйте ↑↓ и Enter)${COLOR_RESET}\n" "$latest_version_clean"
+	printf "${COLOR_INFO}(последние 5 версий, по умолчанию: %s)${COLOR_RESET}\n" "$latest_version_clean"
 	target_version=$(select_menu $version_options) || exit 0
+
+	# Проверка: не пытаемся ли обновиться на ту же версию
+	current_version_base=$(echo "$current_version" | sed 's/-.*$//')
+	if [ "$target_version" = "$current_version_base" ]; then
+		printf "\n"
+		log_warning "Выбрана текущая версия ($target_version)"
+		if ! ask_yes_no "Продолжить? (может привести к конфликтам)"; then
+			log_info "Обновление отменено"
+			exit 0
+		fi
+		printf "\n"
+	fi
 
 	# Проверка наличия .github перед merge
 	has_project_github="no"

@@ -44,7 +44,8 @@ fi
 log_info "Версия шаблона: $current_version"
 log_info "URL шаблона: $template_url"
 
-current_version_clean=$(echo "$current_version" | sed 's/^v//' | cut -d'-' -f1)
+# Сохраняем полную версию (с -N-gXXX если есть), а не только базовую
+current_version_clean=$(echo "$current_version" | sed 's/^v//')
 
 # ===========================================
 # СЕКЦИЯ 1: Подготовка Git репозитория
