@@ -69,7 +69,7 @@ devenv-init-internal:
 		fi; \
 		COMMIT_COUNT=$$($(call count-commits,$$TEMP_DIR)); \
 		if [ "$$COMMIT_COUNT" -gt 0 ]; then \
-			$(call log-info,В удалённом репозитории найдено $$COMMIT_COUNT коммита); \
+			$(call log-info,В удалённом репозитории найдено $$COMMIT_COUNT коммитов); \
 			printf "\n"; \
 			if ! $(call ask-yes-no,Продолжить инициализацию нового проекта? (история коммитов будет сохранена)); then \
 				rm -rf "$$TEMP_DIR"; \
@@ -132,7 +132,7 @@ devenv-init-internal:
 
 	@# 3.1. git add -A
 	@git add -A 2>/dev/null || true
-	@$(call log-success,Файлы добавлены в staging area)
+	@$(call log-info,Файлы добавлены в git staging область)
 
 	@# 3.2. git commit
 	@if [ "$$INIT_MODE" = "Новый репозиторий (локально)" ]; then \

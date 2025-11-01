@@ -125,10 +125,8 @@ define ask-yes-no
 		false; \
 	}; \
 	if [ "$$CHOICE" = "Да" ]; then \
-		printf "$(COLOR_SUCCESS)✓ Продолжаем$(COLOR_RESET)\n" >&2; \
 		true; \
 	else \
-		printf "$(COLOR_INFO)ℹ Отменено$(COLOR_RESET)\n" >&2; \
 		false; \
 	fi
 endef
