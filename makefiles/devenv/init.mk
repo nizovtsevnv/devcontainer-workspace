@@ -56,15 +56,15 @@ devenv-init-internal:
 	$(call log-success,Получены теги из template)
 
 	@# Интерактивный выбор нового origin
-	@printf "\n"; \
-	$(call ask-yes-no,Указать удалённый Git URL?) || { \
-		$(call log-info,Remote 'origin' не настроен \(можно добавить позже\)); \
-		exit 0; \
-	}; \
-	NEW_ORIGIN=$$($(call ask-input-with-default,,URL удалённого репозитория)); \
-	if [ -n "$$NEW_ORIGIN" ]; then \
-		git remote add origin "$$NEW_ORIGIN"; \
-		$(call log-success,Установлен git remote 'origin'\: $$NEW_ORIGIN); \
+	@printf "\n"
+	@if $(call ask-yes-no,Указать удалённый Git URL?); then \
+		NEW_ORIGIN=$$($(call ask-input-with-default,,URL удалённого репозитория)); \
+		if [ -n "$$NEW_ORIGIN" ]; then \
+			git remote add origin "$$NEW_ORIGIN"; \
+			$(call log-success,Установлен git remote 'origin'\: $$NEW_ORIGIN); \
+		else \
+			$(call log-info,Remote 'origin' не настроен \(можно добавить позже\)); \
+		fi; \
 	else \
 		$(call log-info,Remote 'origin' не настроен \(можно добавить позже\)); \
 	fi
@@ -88,14 +88,14 @@ devenv-init-internal:
 	fi
 
 	@# Initial commit
-	@printf "\n"; \
-	$(call ask-yes-no,Создать initial commit?) || { \
+	@printf "\n"
+	@if $(call ask-yes-no,Создать initial commit?); then \
+		git add . 2>/dev/null || true; \
+		git commit -m "chore: initialize project from devcontainer-workspace template" 2>/dev/null || true; \
+		$(call log-success,Initial commit создан); \
+	else \
 		$(call log-info,Initial commit пропущен - можно создать вручную); \
-		exit 0; \
-	}
-	@git add . 2>/dev/null || true
-	@git commit -m "chore: initialize project from devcontainer-workspace template" 2>/dev/null || true
-	@$(call log-success,Initial commit создан)
+	fi
 
 	@printf "\n"
 	@$(call log-success,Проект успешно инициализирован!)
