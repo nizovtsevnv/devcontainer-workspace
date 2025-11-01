@@ -17,110 +17,25 @@ module:
 # Интерактивная команда (только для запуска внутри контейнера)
 .PHONY: module-interactive
 module-interactive:
-	@$(call log-section,Создание нового модуля)
-	@printf "\n"
-
-	@# Выбор стека если не указан
-	@if [ -z "$(MODULE_STACK)" ]; then \
-		$(call log-info,Шаг 1/3: Выберите стек технологий); \
-		DISPLAY=$$(sh makefiles/scripts/select-menu.sh "Node.js" "PHP" "Python" "Rust") || exit 1; \
-		case "$$DISPLAY" in \
-			"Node.js") STACK="nodejs" ;; \
-			"PHP") STACK="php" ;; \
-			"Python") STACK="python" ;; \
-			"Rust") STACK="rust" ;; \
-		esac; \
-		printf "\n"; \
-	else \
-		STACK="$(MODULE_STACK)"; \
-	fi; \
-	$(MAKE) module-select-type-$$STACK
+	@export COLOR_SUCCESS="$(COLOR_SUCCESS)"; \
+	export COLOR_ERROR="$(COLOR_ERROR)"; \
+	export COLOR_INFO="$(COLOR_INFO)"; \
+	export COLOR_WARNING="$(COLOR_WARNING)"; \
+	export COLOR_SECTION="$(COLOR_SECTION)"; \
+	export COLOR_RESET="$(COLOR_RESET)"; \
+	export COLOR_DIM="$(COLOR_DIM)"; \
+	export MODULE_STACK="$(MODULE_STACK)"; \
+	export MODULE_TYPE="$(MODULE_TYPE)"; \
+	export MODULE_NAME="$(MODULE_NAME)"; \
+	RESULT=$$(sh makefiles/scripts/module-create.sh); \
+	STACK=$$(echo "$$RESULT" | awk '{print $$1}'); \
+	TYPE=$$(echo "$$RESULT" | awk '{print $$2}'); \
+	NAME=$$(echo "$$RESULT" | awk '{print $$3}'); \
+	$(MAKE) module-validate-and-create STACK="$$STACK" TYPE="$$TYPE" NAME="$$NAME"
 
 # ===================================
-# Выбор типа проекта для каждого стека
+# Запрос имени модуля (удалено - перенесено в wizard скрипт)
 # ===================================
-
-.PHONY: module-select-type-nodejs
-module-select-type-nodejs:
-	@if [ -z "$(MODULE_TYPE)" ]; then \
-		$(call log-info,Шаг 2/3: Выберите тип Node.js проекта); \
-		SEL=$$(sh makefiles/scripts/select-menu.sh "Bun (TypeScript)" "npm (TypeScript)" "pnpm (TypeScript)" "yarn (TypeScript)" "Next.js (TypeScript + Tailwind)" "Expo (TypeScript)" "SvelteKit (TypeScript)") || exit 1; \
-		case "$$SEL" in \
-			"Bun"*) TYPE="bun" ;; "npm"*) TYPE="npm" ;; "pnpm"*) TYPE="pnpm" ;; "yarn"*) TYPE="yarn" ;; "Next.js"*) TYPE="nextjs" ;; "Expo"*) TYPE="expo" ;; "SvelteKit"*) TYPE="svelte" ;; \
-		esac; \
-		printf "\n"; \
-	else \
-		TYPE="$(MODULE_TYPE)"; \
-	fi; \
-	$(MAKE) module-request-name STACK=nodejs TYPE=$$TYPE
-
-.PHONY: module-select-type-php
-module-select-type-php:
-	@if [ -z "$(MODULE_TYPE)" ]; then \
-		$(call log-info,Шаг 2/3: Выберите тип PHP проекта); \
-		SEL=$$(sh makefiles/scripts/select-menu.sh "Composer library" "Composer project" "Laravel") || exit 1; \
-		case "$$SEL" in \
-			"Composer library") TYPE="composer-lib" ;; "Composer project") TYPE="composer-project" ;; "Laravel") TYPE="laravel" ;; \
-		esac; \
-		printf "\n"; \
-	else \
-		TYPE="$(MODULE_TYPE)"; \
-	fi; \
-	$(MAKE) module-request-name STACK=php TYPE=$$TYPE
-
-.PHONY: module-select-type-python
-module-select-type-python:
-	@if [ -z "$(MODULE_TYPE)" ]; then \
-		$(call log-info,Шаг 2/3: Выберите тип Python проекта); \
-		SEL=$$(sh makefiles/scripts/select-menu.sh "UV (быстрый, рекомендуется)" "Poetry") || exit 1; \
-		case "$$SEL" in \
-			"UV"*) TYPE="uv" ;; \
-			"Poetry") TYPE="poetry" ;; \
-		esac; \
-		printf "\n"; \
-	else \
-		TYPE="$(MODULE_TYPE)"; \
-	fi; \
-	\
-	$(MAKE) module-request-name STACK=python TYPE=$$TYPE
-
-.PHONY: module-select-type-rust
-module-select-type-rust:
-	@if [ -z "$(MODULE_TYPE)" ]; then \
-		$(call log-info,Шаг 2/3: Выберите тип Rust проекта); \
-		SEL=$$(sh makefiles/scripts/select-menu.sh "Binary (приложение)" "Library (библиотека)" "Dioxus (веб-приложение)") || exit 1; \
-		case "$$SEL" in \
-			"Binary"*) TYPE="bin" ;; \
-			"Library"*) TYPE="lib" ;; \
-			"Dioxus"*) TYPE="dioxus" ;; \
-		esac; \
-		printf "\n"; \
-	else \
-		TYPE="$(MODULE_TYPE)"; \
-	fi; \
-	\
-	$(MAKE) module-request-name STACK=rust TYPE=$$TYPE
-
-# ===================================
-# Запрос имени модуля
-# ===================================
-
-.PHONY: module-request-name
-module-request-name:
-	@if [ -z "$(MODULE_NAME)" ]; then \
-		$(call log-info,Шаг 3/3: Введите имя модуля (буквы цифры дефис underscore)); \
-		printf "\n"; \
-		NAME=$$($(call ask-input,example-module,Имя модуля)); \
-		if [ -z "$$NAME" ]; then \
-			$(call log-error,Имя не может быть пустым); \
-			exit 1; \
-		fi; \
-		printf "\n"; \
-	else \
-		NAME="$(MODULE_NAME)"; \
-	fi; \
-	\
-	$(MAKE) module-validate-and-create STACK=$(STACK) TYPE=$(TYPE) NAME="$$NAME"
 
 # ===================================
 # Валидация и создание
