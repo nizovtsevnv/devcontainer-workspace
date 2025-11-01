@@ -180,7 +180,7 @@ make module MODULE_STACK=rust MODULE_TYPE=dioxus MODULE_NAME=web-ui
 **Параметры:**
 - `MODULE_STACK` - технологический стек (nodejs, php, python, rust)
 - `MODULE_TYPE` - тип проекта (см. выше)
-- `MODULE_NAME` - имя модуля (буквы, цифры, дефис, underscore)
+- `MODULE_NAME` - имя модуля (буквы, цифры, дефис, подчеркивание)
 - `MODULE_TARGET` - директория для создания (по умолчанию `modules`)
 
 **Примеры:**

@@ -38,7 +38,7 @@ fi
 
 # Проверка обновлений
 printf '\n'
-if ! show_spinner "Проверка обновлений из $remote" git fetch "$remote" --tags; then
+if ! show_spinner "Проверка обновлений шаблона" git fetch "$remote" --tags; then
 	log_error "Не удалось fetch из $remote remote"
 	exit 1
 fi

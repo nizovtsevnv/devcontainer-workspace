@@ -23,6 +23,8 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
   git \
   make \
   build-essential \
+  shellcheck \
+  sudo \
   # Docker CLI для работы с host Docker
   docker.io \
   docker-compose \
@@ -144,6 +146,30 @@ RUN python3 -m pip install --break-system-packages \
 RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
 
 # ===================================
+# Bun (системная установка для производительности Podman)
+# ===================================
+RUN curl -fsSL https://bun.sh/install | bash \
+  && mv /root/.bun /usr/local/bun \
+  && ln -s /usr/local/bun/bin/bun /usr/local/bin/bun \
+  && ln -s /usr/local/bun/bin/bunx /usr/local/bin/bunx
+
+# ===================================
+# Rust + Cargo (системная установка для производительности Podman)
+# ===================================
+ENV CARGO_HOME=/usr/local/cargo
+ENV RUSTUP_HOME=/usr/local/rustup
+ENV PATH="${CARGO_HOME}/bin:${PATH}"
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+    sh -s -- -y --default-toolchain nightly --no-modify-path \
+  && rustup component add rustfmt clippy rust-analyzer
+
+# Cargo утилиты с кэшированием для ускорения сборки
+RUN --mount=type=cache,target=${CARGO_HOME}/registry \
+  --mount=type=cache,target=${CARGO_HOME}/git \
+  cargo install cargo-watch cargo-edit cargo-outdated
+
+# ===================================
 # Создание непривилегированного пользователя
 # Совместимость с Docker и Podman на всех платформах
 # ===================================
@@ -161,12 +187,8 @@ RUN (getent group docker || groupadd docker) && \
   usermod -aG docker,podman ${USERNAME}
 
 # Настройка sudo без пароля
-RUN apt-get update \
-  && apt-get install -y sudo \
-  && echo ${USERNAME} ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/${USERNAME} \
-  && chmod 0440 /etc/sudoers.d/${USERNAME} \
-  && apt-get clean -y \
-  && rm -rf /var/lib/apt/lists/*
+RUN echo ${USERNAME} ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/${USERNAME} \
+  && chmod 0440 /etc/sudoers.d/${USERNAME}
 
 # Настройка npm для пользователя
 RUN mkdir -p /home/${USERNAME}/.npm-global \
@@ -193,31 +215,11 @@ WORKDIR /workspace
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # ===================================
-# Node.js пакетные менеджеры для пользователя
-# ===================================
-# Установка bun (современный пакетный менеджер для Node.js)
-RUN curl -fsSL https://bun.sh/install | bash
-
-# ===================================
-# Rust + cargo инструменты
-# ===================================
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly \
-  && . $HOME/.cargo/env \
-  && rustup component add rustfmt clippy rust-analyzer
-
-# Установка cargo утилит с кэшированием для ускорения сборки
-# Кэш монтируется с явным указанием uid/gid для корректных прав доступа
-RUN --mount=type=cache,target=/home/${USERNAME}/.cargo/registry,uid=${CONTAINER_UID},gid=${CONTAINER_GID} \
-  --mount=type=cache,target=/home/${USERNAME}/.cargo/git,uid=${CONTAINER_UID},gid=${CONTAINER_GID} \
-  . $HOME/.cargo/env \
-  && cargo install cargo-watch cargo-edit cargo-outdated
-
-# ===================================
 # Настройка окружения и PATH
 # ===================================
 RUN npm config set prefix "/home/$USERNAME/.npm-global"
 
-ENV PATH="/home/$USERNAME/.npm-global/bin:/home/$USERNAME/.cargo/bin:/home/$USERNAME/.composer/vendor/bin:/home/$USERNAME/.bun/bin:/root/.composer/vendor/bin:/root/.cargo/bin:${PATH}"
+ENV PATH="/home/$USERNAME/.npm-global/bin:/home/$USERNAME/.composer/vendor/bin:/root/.composer/vendor/bin:${PATH}"
 
 # Настройка git для пользователя
 RUN git config --global init.defaultBranch main \
@@ -232,6 +234,7 @@ RUN echo "========================================" \
   && echo "Git:       $(git --version)" \
   && echo "Make:      $(make --version | head -n1)" \
   && echo "jq:        $(jq --version)" \
+  && echo "shellcheck: $(shellcheck --version | head -n2 | tail -n1)" \
   && echo "yq:        $(yq --version)" \
   && echo "----------------------------------------" \
   && echo "Node.js:   $(node --version)" \

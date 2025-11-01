@@ -153,23 +153,6 @@ require_clean_working_tree() {
 	return 0
 }
 
-# Проверить доступность удалённого репозитория
-# Параметр: $1 - URL репозитория
-# Возвращает: 0 если доступен, 1 если нет
-# Использование: if check_remote_accessible "git@github.com:user/repo.git"; then ...
-check_remote_accessible() {
-	if ! git ls-remote "$1" >/dev/null 2>&1; then
-		if ! command -v log_error >/dev/null 2>&1; then
-			SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-			. "$SCRIPT_DIR/ui.sh"
-		fi
-		log_error "Удалённый репозиторий недоступен: $1"
-		log_info "Проверьте URL и доступ к репозиторию"
-		return 1
-	fi
-	return 0
-}
-
 # Подсчитать количество коммитов в репозитории
 # Параметр: $1 - путь к git репозиторию (опционально, по умолчанию текущий)
 # Возвращает: число коммитов
@@ -182,17 +165,3 @@ count_commits() {
 	fi
 }
 
-# Клонировать репозиторий во временную папку
-# Параметр: $1 - URL репозитория
-# Возвращает: путь к временной папке через stdout, exit code 0 при успехе
-# Использование: temp_dir=$(clone_to_temp "https://github.com/user/repo.git")
-clone_to_temp() {
-	temp_dir=$(mktemp -d /tmp/devenv-init.XXXXXX)
-	if git clone -q "$1" "$temp_dir" 2>&1; then
-		echo "$temp_dir"
-		return 0
-	else
-		rm -rf "$temp_dir"
-		return 1
-	fi
-}

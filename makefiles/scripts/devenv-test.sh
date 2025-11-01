@@ -86,6 +86,17 @@ show_spinner "Создание test-python" make --no-print-directory module MOD
 show_spinner "Создание test-rust" make --no-print-directory module MODULE_STACK=rust MODULE_TYPE=bin MODULE_NAME=test-rust MODULE_TARGET="$TEST_DIR/modules"
 printf "\n"
 
+# Тестирование shell-скриптов статическим анализом
+log_section "Проверка качества shell-скриптов (shellcheck)"
+
+for script in makefiles/scripts/*.sh makefiles/scripts/lib/*.sh; do
+	[ -f "$script" ] || continue
+	script_name=$(basename "$script")
+	run_test "shellcheck: $script_name" shellcheck -x "$script"
+done
+
+printf "\n"
+
 # Тестирование базовых команд
 log_section "Тестирование базовых команд"
 

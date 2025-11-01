@@ -17,8 +17,8 @@ help:
 			awk 'BEGIN {FS = ": "}; {printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n", "make " $$1, $$2}'; \
 		if [ ! -f "$(WORKSPACE_ROOT)/.template-version" ]; then \
 			printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv init" "Инициализация проекта из шаблона"; \
-			printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv test" "Запустить автотесты (только для разработки)"; \
 		fi; \
+		printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv test" "Запустить автотесты шаблона"; \
 		printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv update" "Обновить версию шаблона"; \
 		printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv status" "Текущая и актуальная версия шаблона"; \
 		printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make module" "Создать новый модуль (Node.js, PHP, Python, Rust)"; \

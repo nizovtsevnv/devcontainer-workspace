@@ -11,8 +11,10 @@ DEVENV_CMD := $(word 2,$(MAKECMDGOALS))
 devenv:
 	@if [ -z "$(DEVENV_CMD)" ]; then \
 		printf "$(COLOR_INFO)ℹ$(COLOR_RESET) Команды управления шаблоном проекта:\n"; \
-		printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv init" "Инициализация проекта из шаблона"; \
-		printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv test" "Запустить автотесты (только для разработки)"; \
+		if [ ! -f ".template-version" ]; then \
+			printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv init" "Инициализация проекта из шаблона"; \
+		fi; \
+		printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv test" "Запустить автотесты шаблона"; \
 		printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv status" "Текущий статус и версия шаблона"; \
 		printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv update" "Обновить версию шаблона"; \
 	elif [ "$(DEVENV_CMD)" = "init" ]; then \
@@ -33,4 +35,3 @@ devenv:
 .PHONY: init test status update
 init test status update:
 	@:
-

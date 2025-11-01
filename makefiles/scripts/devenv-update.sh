@@ -37,7 +37,7 @@ if [ "$STATUS" = "инициализирован" ]; then
 	stop_container_if_running 2>/dev/null || true
 
 	# Fetch обновлений
-	show_spinner "Проверка обновлений из template" git fetch template --tags --force 2>&1 || true
+	show_spinner "Проверка обновлений шаблона" git fetch template --tags --force 2>&1 || true
 
 	# Определить текущую и последнюю версии
 	current_version=$(get_template_version)
