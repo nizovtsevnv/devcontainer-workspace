@@ -62,7 +62,7 @@ devenv-init-internal:
 			exit 0; \
 		fi; \
 		set +e; \
-		TEMP_DIR=$$($(call log-spinner,Клонирование репозитория,$(call clone-to-temp,$$ORIGIN_URL))); \
+		$(call log-spinner,Клонирование репозитория,TEMP_DIR=$$($(call clone-to-temp,$$ORIGIN_URL))); \
 		CLONE_STATUS=$$?; \
 		set -e; \
 		if [ $$CLONE_STATUS -ne 0 ] || [ -z "$$TEMP_DIR" ] || [ ! -d "$$TEMP_DIR" ]; then \
