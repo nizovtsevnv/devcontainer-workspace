@@ -116,16 +116,20 @@ endef
 
 # Запрос подтверждения через меню выбора
 # Параметр: $(1) - вопрос
-# Возвращает: exit 0 если "Да", exit 1 если "Нет" или ESC
-# Использование: @$(call ask-yes-no,Продолжить?)
+# Возвращает: true (0) если "Да", false (1) если "Нет" или ESC
+# Использование: @$(call ask-yes-no,Продолжить?) || { log-info "Отменено"; exit 0; }
 define ask-yes-no
 	printf "$(COLOR_WARNING)? $(COLOR_RESET)%s\n" "$(1)" >&2; \
-	CHOICE=$$(sh makefiles/scripts/select-menu.sh "Да" "Нет") || exit 1; \
+	CHOICE=$$(sh makefiles/scripts/select-menu.sh "Да" "Нет") || { \
+		printf "$(COLOR_INFO)ℹ Отменено$(COLOR_RESET)\n" >&2; \
+		false; \
+	}; \
 	if [ "$$CHOICE" = "Да" ]; then \
 		printf "$(COLOR_SUCCESS)✓ Продолжаем$(COLOR_RESET)\n" >&2; \
+		true; \
 	else \
 		printf "$(COLOR_INFO)ℹ Отменено$(COLOR_RESET)\n" >&2; \
-		exit 1; \
+		false; \
 	fi
 endef
 
