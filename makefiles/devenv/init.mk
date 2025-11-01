@@ -12,7 +12,10 @@ devenv-init-internal:
 		$(call log-info,Remote 'template' уже существует); \
 		exit 1; \
 	fi
-	@$(call ask-yes-no,Шаблон будет переведён в режим проекта - это действие необратимо - продолжить?)
+	@$(call ask-yes-no,Шаблон будет переведён в режим проекта - это действие необратимо - продолжить?) || { \
+		$(call log-info,Инициализация отменена); \
+		exit 0; \
+	}
 
 	@# Определение версии шаблона
 	@CURRENT_VERSION=$$(git describe --tags 2>/dev/null || echo "unknown"); \
