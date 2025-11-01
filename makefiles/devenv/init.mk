@@ -63,6 +63,9 @@ devenv-init-internal:
 		fi; \
 		TEMP_DIR=$$($(call log-spinner,Клонирование репозитория,$(call clone-to-temp,$$ORIGIN_URL))); \
 		if [ -z "$$TEMP_DIR" ] || [ ! -d "$$TEMP_DIR" ]; then \
+			printf "\n"; \
+			$(call log-error,Не удалось клонировать репозиторий); \
+			$(call log-info,Проверьте URL и доступ к репозиторию); \
 			exit 0; \
 		fi; \
 		COMMIT_COUNT=$$($(call count-commits,$$TEMP_DIR)); \
@@ -137,7 +140,7 @@ devenv-init-internal:
 		COMMIT_MSG="chore: reinitialize project from devcontainer-workspace template"; \
 	fi
 	@git commit -q -m "$$COMMIT_MSG" 2>/dev/null || true
-	@printf "$(COLOR_SUCCESS)✓ %s$(COLOR_RESET)\n" "Создан коммит \"$$COMMIT_MSG\""
+	@printf "$(COLOR_SUCCESS)✓$(COLOR_RESET) %s\n" "Создан коммит \"$$COMMIT_MSG\""
 
 	@# 3.3. git push (только если origin настроен)
 	@if [ "$$ORIGIN_CONFIGURED" = "true" ]; then \
