@@ -58,10 +58,7 @@ devenv-init-internal:
 		printf "\n"; \
 		ORIGIN_URL=$$($(call ask-input-with-default,,URL удалённого репозитория)) || exit 0; \
 		if [ -z "$$ORIGIN_URL" ]; then \
-			exit 0; \
-		fi; \
-		if ! $(call log-spinner,Проверка доступности репозитория,$(call check-remote-accessible,$$ORIGIN_URL)); then \
-			$(call log-error,Проверьте URL и доступ к репозиторию); \
+			$(call log-error,URL репозитория не может быть пустым); \
 			exit 0; \
 		fi; \
 		TEMP_DIR=$$($(call log-spinner,Клонирование репозитория,$(call clone-to-temp,$$ORIGIN_URL))); \
