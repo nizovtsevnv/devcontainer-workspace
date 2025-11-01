@@ -48,6 +48,65 @@ get_all_semantic_tags() {
 	git tag --list | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V
 }
 
+# Получить мажорную версию из версии
+# Параметр: $1 - версия (может быть с префиксом v)
+# Использование: major=$(get_major_version "0.4.0")
+get_major_version() {
+	echo "$1" | sed 's/^v//' | cut -d'.' -f1
+}
+
+# Получить последний патч для каждой группы MAJOR.MINOR
+# Параметр: $1 - мажорная версия (без v)
+# Возвращает: список тегов (с v), по одному на MAJOR.MINOR группу
+# Использование: patches=$(get_latest_patch_per_minor "0")
+get_latest_patch_per_minor() {
+	major="$1"
+	git tag --list | grep -E "^v${major}\.[0-9]+\.[0-9]+$" | sort -V | \
+	awk -F'.' '{key=$1"."$2; last[key]=$0} END {for (k in last) print last[k]}' | sort -Vr
+}
+
+# Получить версию HEAD ветки template/main
+# Возвращает: версию без префикса v (например "0.4.0-10-gdef456")
+# Использование: main_ver=$(get_template_main_version)
+get_template_main_version() {
+	git describe --tags template/main 2>/dev/null | sed 's/^v//' || echo ""
+}
+
+# Получить отфильтрованный список версий для выбора
+# Параметр: $1 - текущая версия, $2 - макс количество (по умолчанию 10)
+# Возвращает: список версий через пробел
+# Использование: options=$(get_filtered_version_options "0.4.0" 10)
+get_filtered_version_options() {
+	current_version="$1"
+	max_count="${2:-10}"
+
+	# Извлечь мажорную версию
+	major=$(get_major_version "$current_version")
+
+	# Получить версию template/main
+	main_version=$(get_template_main_version)
+	latest_tag=$(get_latest_semantic_tag | sed 's/^v//')
+
+	# Собрать результат
+	result=""
+
+	# Если есть патч-коммиты после последнего тега, добавить main
+	if [ -n "$main_version" ] && [ "$main_version" != "$latest_tag" ]; then
+		result="main ($main_version)"
+	fi
+
+	# Получить последние патчи по каждой minor версии
+	patches=$(get_latest_patch_per_minor "$major" | sed 's/^v//' | head -n "$max_count")
+
+	# Объединить результаты
+	if [ -n "$result" ]; then
+		echo "$result"
+		echo "$patches"
+	else
+		echo "$patches"
+	fi
+}
+
 # Форматировать список версий для вывода (убрать v, через запятую)
 # Параметр: $1 - список тегов (newline-separated)
 # Использование: formatted=$(format_versions_list "$tags")

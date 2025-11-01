@@ -23,13 +23,18 @@ template_full=$(get_template_version)
 # Базовая версия для Docker образа (редуцированная)
 template_base=$(echo "$template_full" | sed 's/-[0-9]*-g.*//')
 
-# Если версии разные, показываем обе
-if [ "$template_full" != "$template_base" ]; then
-	printf "  ${COLOR_SUCCESS}%-20s${COLOR_RESET} %s ${COLOR_DIM}(код из %s)${COLOR_RESET}\n" "Шаблон" "$template_base" "$template_full"
-else
-	printf "  ${COLOR_SUCCESS}%-20s${COLOR_RESET} %s\n" "Шаблон" "$template_full"
+# Версия template/main
+main_version=$(get_template_main_version)
+
+# Показать текущую версию
+printf "  ${COLOR_SUCCESS}%-20s${COLOR_RESET} %s\n" "Текущая версия" "$template_full"
+
+# Показать доступную версию main (если отличается)
+if [ -n "$main_version" ] && [ "$main_version" != "$template_base" ]; then
+	printf "  ${COLOR_SUCCESS}%-20s${COLOR_RESET} %s ${COLOR_DIM}(template/main)${COLOR_RESET}\n" "Доступна версия" "$main_version"
 fi
 
+# Показать Docker образ
 printf "  ${COLOR_SUCCESS}%-20s${COLOR_RESET} %s\n" "Docker образ" "$CONTAINER_IMAGE"
 
 printf "\n"

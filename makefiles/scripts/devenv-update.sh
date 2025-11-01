@@ -71,19 +71,25 @@ if [ "$STATUS" = "инициализирован" ]; then
 	show_changelog "$current_version" "$latest_version"
 	printf "\n"
 
-	# Интерактивный выбор версии (последние 5 версий)
-	all_tags=$(get_all_semantic_tags)
-	version_options=$(echo "$all_tags" | sed 's/^v//g' | tail -5 | tac | tr '\n' ' ')
+	# Интерактивный выбор версии (умная фильтрация)
+	major=$(get_major_version "$current_version")
+	version_options=$(get_filtered_version_options "$current_version" 10 | tr '\n' ' ')
 
 	log_section "Выберите версию для обновления:"
-	printf "${COLOR_INFO}(последние 5 версий, по умолчанию: %s)${COLOR_RESET}\n" "$latest_version_clean"
+	printf "${COLOR_INFO}(отфильтровано по MAJOR=$major, последние патчи каждой minor версии, до 10 версий)${COLOR_RESET}\n"
 	target_version=$(select_menu $version_options) || exit 0
 
 	# Проверка: не пытаемся ли обновиться на ту же версию
 	current_version_base=$(echo "$current_version" | sed 's/-.*$//')
-	if [ "$target_version" = "$current_version_base" ]; then
+	# Извлечь чистую версию из "main (X.Y.Z-N-gXXX)" если нужно
+	check_version="$target_version"
+	if echo "$target_version" | grep -q '^main ('; then
+		check_version=$(echo "$target_version" | sed 's/main (\(.*\))/\1/' | sed 's/-.*$//')
+	fi
+
+	if [ "$check_version" = "$current_version_base" ]; then
 		printf "\n"
-		log_warning "Выбрана текущая версия ($target_version)"
+		log_warning "Выбрана текущая или близкая версия ($target_version)"
 		if ! ask_yes_no "Продолжить? (может привести к конфликтам)"; then
 			log_info "Обновление отменено"
 			exit 0
@@ -98,7 +104,8 @@ if [ "$STATUS" = "инициализирован" ]; then
 	fi
 
 	# Определяем ref для merge
-	if [ "$target_version" = "main" ]; then
+	if echo "$target_version" | grep -q '^main'; then
+		# Выбрано main или "main (версия)"
 		merge_ref="template/main"
 	else
 		merge_ref="v$target_version"
@@ -137,10 +144,13 @@ if [ "$STATUS" = "инициализирован" ]; then
 	remove_template_artifacts
 
 	# Определяем новую версию
-	if [ "$target_version" != "main" ]; then
-		new_version="$target_version"
-	else
+	if echo "$target_version" | grep -q '^main ('; then
+		# Извлечь версию из "main (0.4.0-10-gXXX)"
+		new_version=$(echo "$target_version" | sed 's/main (\(.*\))/\1/')
+	elif [ "$target_version" = "main" ]; then
 		new_version=$(git describe --tags template/main 2>/dev/null | sed 's/^v//' || echo "main")
+	else
+		new_version="$target_version"
 	fi
 
 	# Сохраняем новую версию
