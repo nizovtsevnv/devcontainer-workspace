@@ -62,13 +62,21 @@ if [ "$STATUS" = "инициализирован" ]; then
 	latest_version=$(get_latest_semantic_tag)
 	latest_version_clean=$(echo "$latest_version" | sed 's/^v//')
 
+	# Получить версию main (может содержать патч-коммиты)
+	main_version=$(get_template_main_version)
+	if [ -n "$main_version" ]; then
+		display_version="$main_version"
+	else
+		display_version="$latest_version_clean"
+	fi
+
 	printf "Текущая версия шаблона:    %s\n" "$current_version"
-	printf "Последняя версия шаблона:  %s\n" "$latest_version_clean"
+	printf "Последняя версия шаблона:  %s\n" "$display_version"
 
 	# Показать изменения
 	printf "\n"
-	log_info "Изменения ($current_version..$latest_version_clean):"
-	show_changelog "$current_version" "$latest_version"
+	log_info "Изменения ($current_version..$display_version):"
+	show_changelog "$current_version" "template/main"
 	printf "\n"
 
 	# Интерактивный выбор версии (умная фильтрация)
@@ -76,18 +84,13 @@ if [ "$STATUS" = "инициализирован" ]; then
 	version_options=$(get_filtered_version_options "$current_version" 10 | tr '\n' ' ')
 
 	log_section "Выберите версию для обновления:"
-	printf "${COLOR_INFO}(отфильтровано по MAJOR=$major, последние патчи каждой minor версии, до 10 версий)${COLOR_RESET}\n"
 	target_version=$(select_menu $version_options) || exit 0
 
 	# Проверка: не пытаемся ли обновиться на ту же версию
 	current_version_base=$(echo "$current_version" | sed 's/-.*$//')
-	# Извлечь чистую версию из "main (X.Y.Z-N-gXXX)" если нужно
-	check_version="$target_version"
-	if echo "$target_version" | grep -q '^main ('; then
-		check_version=$(echo "$target_version" | sed 's/main (\(.*\))/\1/' | sed 's/-.*$//')
-	fi
+	target_version_base=$(echo "$target_version" | sed 's/-.*$//')
 
-	if [ "$check_version" = "$current_version_base" ]; then
+	if [ "$target_version_base" = "$current_version_base" ]; then
 		printf "\n"
 		log_warning "Выбрана текущая или близкая версия ($target_version)"
 		if ! ask_yes_no "Продолжить? (может привести к конфликтам)"; then
@@ -104,10 +107,11 @@ if [ "$STATUS" = "инициализирован" ]; then
 	fi
 
 	# Определяем ref для merge
-	if echo "$target_version" | grep -q '^main'; then
-		# Выбрано main или "main (версия)"
+	if echo "$target_version" | grep -q -- '-[0-9]*-g'; then
+		# Выбрана версия с патч-коммитами (X.Y.Z-N-gHASH) - используем template/main
 		merge_ref="template/main"
 	else
+		# Выбран тег (X.Y.Z)
 		merge_ref="v$target_version"
 	fi
 
@@ -144,14 +148,7 @@ if [ "$STATUS" = "инициализирован" ]; then
 	remove_template_artifacts
 
 	# Определяем новую версию
-	if echo "$target_version" | grep -q '^main ('; then
-		# Извлечь версию из "main (0.4.0-10-gXXX)"
-		new_version=$(echo "$target_version" | sed 's/main (\(.*\))/\1/')
-	elif [ "$target_version" = "main" ]; then
-		new_version=$(git describe --tags template/main 2>/dev/null | sed 's/^v//' || echo "main")
-	else
-		new_version="$target_version"
-	fi
+	new_version="$target_version"
 
 	# Сохраняем новую версию
 	save_template_version "$new_version"

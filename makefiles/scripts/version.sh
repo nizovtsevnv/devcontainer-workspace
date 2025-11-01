@@ -10,34 +10,41 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/lib/ui.sh"
 . "$SCRIPT_DIR/lib/git.sh"
 . "$SCRIPT_DIR/lib/modules.sh"
+. "$SCRIPT_DIR/lib/template.sh"
 
 # ===================================
 # Версии инструментов в контейнере
 # ===================================
 
-log_info "Версии шаблона и образа:"
+# Проверяем статус инициализации
+check_project_init_status
 
-# Полная версия из .template-version или git
-template_full=$(get_template_version)
+# Показываем версии шаблона только для неинициализированного проекта
+if [ "$STATUS" != "инициализирован" ]; then
+	log_info "Версии шаблона и образа:"
 
-# Базовая версия для Docker образа (редуцированная)
-template_base=$(echo "$template_full" | sed 's/-[0-9]*-g.*//')
+	# Полная версия из .template-version или git
+	template_full=$(get_template_version)
 
-# Версия template/main
-main_version=$(get_template_main_version)
+	# Базовая версия для Docker образа (редуцированная)
+	template_base=$(echo "$template_full" | sed 's/-[0-9]*-g.*//')
 
-# Показать текущую версию
-printf "  ${COLOR_SUCCESS}%-20s${COLOR_RESET} %s\n" "Текущая версия" "$template_full"
+	# Версия template/main
+	main_version=$(get_template_main_version)
 
-# Показать доступную версию main (если отличается)
-if [ -n "$main_version" ] && [ "$main_version" != "$template_base" ]; then
-	printf "  ${COLOR_SUCCESS}%-20s${COLOR_RESET} %s ${COLOR_DIM}(template/main)${COLOR_RESET}\n" "Доступна версия" "$main_version"
+	# Показать текущую версию
+	printf "  ${COLOR_SUCCESS}%-20s${COLOR_RESET} %s\n" "Текущая версия" "$template_full"
+
+	# Показать доступную версию main (если отличается)
+	if [ -n "$main_version" ] && [ "$main_version" != "$template_base" ]; then
+		printf "  ${COLOR_SUCCESS}%-20s${COLOR_RESET} %s ${COLOR_DIM}(template/main)${COLOR_RESET}\n" "Доступна версия" "$main_version"
+	fi
+
+	# Показать Docker образ
+	printf "  ${COLOR_SUCCESS}%-20s${COLOR_RESET} %s\n" "Docker образ" "$CONTAINER_IMAGE"
+
+	printf "\n"
 fi
-
-# Показать Docker образ
-printf "  ${COLOR_SUCCESS}%-20s${COLOR_RESET} %s\n" "Docker образ" "$CONTAINER_IMAGE"
-
-printf "\n"
 log_info "Версии инструментов в контейнере:"
 
 docker_ver=$(docker --version 2>/dev/null | awk '{print $3}' | sed 's/,$//' || echo "не установлен")

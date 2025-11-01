@@ -90,9 +90,10 @@ get_filtered_version_options() {
 	# Собрать результат
 	result=""
 
-	# Если есть патч-коммиты после последнего тега, добавить main
-	if [ -n "$main_version" ] && [ "$main_version" != "$latest_tag" ]; then
-		result="main ($main_version)"
+	# Если есть патч-коммиты после последнего тега, добавить как первую опцию
+	main_version_base=$(echo "$main_version" | sed 's/-[0-9]*-g.*//')
+	if [ -n "$main_version" ] && [ "$main_version" != "$latest_tag" ] && [ "$main_version_base" = "$latest_tag" ]; then
+		result="$main_version"
 	fi
 
 	# Получить последние патчи по каждой minor версии
