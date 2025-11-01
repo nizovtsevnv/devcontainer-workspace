@@ -96,7 +96,7 @@ endef
 # Использование: TEMP_DIR=$$($(call clone-to-temp,<url>))
 define clone-to-temp
 	TEMP_DIR=$$(mktemp -d /tmp/devenv-init.XXXXXX); \
-	if git clone -q "$(1)" "$$TEMP_DIR" 2>/dev/null; then \
+	if git clone -q "$(1)" "$$TEMP_DIR" 2>&1; then \
 		echo "$$TEMP_DIR"; \
 	else \
 		rm -rf "$$TEMP_DIR"; \

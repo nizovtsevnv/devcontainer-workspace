@@ -60,10 +60,12 @@ devenv-init-internal:
 		if [ -z "$$ORIGIN_URL" ]; then \
 			exit 0; \
 		fi; \
-		$(call log-spinner,Проверка доступности репозитория,$(call check-remote-accessible,$$ORIGIN_URL)) || exit 0; \
-		$(call log-spinner,Клонирование репозитория,TEMP_DIR=$$($(call clone-to-temp,$$ORIGIN_URL))); \
+		if ! $(call log-spinner,Проверка доступности репозитория,$(call check-remote-accessible,$$ORIGIN_URL)); then \
+			$(call log-error,Проверьте URL и доступ к репозиторию); \
+			exit 0; \
+		fi; \
+		TEMP_DIR=$$($(call log-spinner,Клонирование репозитория,$(call clone-to-temp,$$ORIGIN_URL))); \
 		if [ -z "$$TEMP_DIR" ] || [ ! -d "$$TEMP_DIR" ]; then \
-			$(call log-error,Не удалось клонировать репозиторий); \
 			exit 0; \
 		fi; \
 		COMMIT_COUNT=$$($(call count-commits,$$TEMP_DIR)); \

@@ -6,19 +6,19 @@
 # Использование: $(call log-info,message)
 
 define log-info
-	printf "$(COLOR_INFO)ℹ %s$(COLOR_RESET)\n" "$(1)"
+	printf "$(COLOR_INFO)ℹ$(COLOR_RESET) %s\n" "$(1)"
 endef
 
 define log-success
-	printf "$(COLOR_SUCCESS)✓ %s$(COLOR_RESET)\n" "$(1)"
+	printf "$(COLOR_SUCCESS)✓$(COLOR_RESET) %s\n" "$(1)"
 endef
 
 define log-warning
-	printf "$(COLOR_WARNING)⚠ %s$(COLOR_RESET)\n" "$(1)"
+	printf "$(COLOR_WARNING)⚠$(COLOR_RESET) %s\n" "$(1)"
 endef
 
 define log-error
-	printf "$(COLOR_ERROR)✗ %s$(COLOR_RESET)\n" "$(1)" >&2
+	printf "$(COLOR_ERROR)✗$(COLOR_RESET) %s\n" "$(1)" >&2
 endef
 
 define log-section
