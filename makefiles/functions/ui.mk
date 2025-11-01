@@ -87,7 +87,7 @@ define log-spinner
 	fi; \
 	\
 	rm -f "$$tmpfile"; \
-	exit $$exit_code
+	test $$exit_code -eq 0
 endef
 
 # ===================================

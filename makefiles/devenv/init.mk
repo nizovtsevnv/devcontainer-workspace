@@ -17,30 +17,28 @@ devenv-init-internal:
 		exit 1; \
 	fi
 
-	@# ===========================================
-	@# СЕКЦИЯ 1: Подготовка Git репозитория
-	@# ===========================================
-	@printf "\n"
-	@$(call log-section,Подготовка Git репозитория)
-
-	@# 1.1. Определение версии шаблона
+	@# Определение версии и URL шаблона
 	@CURRENT_VERSION=$$(git describe --tags 2>/dev/null || echo "unknown")
 	@if [ "$$CURRENT_VERSION" = "unknown" ]; then \
 		$(call log-error,Не удалось определить версию шаблона); \
 		$(call log-info,Убедитесь что вы клонировали репозиторий с тегами: git clone --tags); \
 		exit 1; \
 	fi
-	@$(call log-info,Версия шаблона: $$CURRENT_VERSION)
-	@CURRENT_VERSION_CLEAN=$$(echo "$$CURRENT_VERSION" | sed 's/^v//' | cut -d'-' -f1)
-
-	@# 1.2. Сохранение TEMPLATE_URL
 	@TEMPLATE_URL=$$(git remote get-url origin 2>/dev/null)
 	@if [ -z "$$TEMPLATE_URL" ]; then \
 		$(call log-error,Не удалось определить URL шаблона из origin); \
 		$(call log-info,Убедитесь что вы клонировали шаблон через git clone); \
 		exit 1; \
 	fi
+	@$(call log-info,Версия шаблона: $$CURRENT_VERSION)
 	@$(call log-info,URL шаблона: $$TEMPLATE_URL)
+	@CURRENT_VERSION_CLEAN=$$(echo "$$CURRENT_VERSION" | sed 's/^v//' | cut -d'-' -f1)
+
+	@# ===========================================
+	@# СЕКЦИЯ 1: Подготовка Git репозитория
+	@# ===========================================
+	@printf "\n"
+	@$(call log-section,Подготовка Git репозитория)
 
 	@# 1.3. Выбор режима инициализации
 	@printf "\n"
