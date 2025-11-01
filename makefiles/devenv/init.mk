@@ -64,7 +64,8 @@ devenv-init-internal:
 		fi; \
 		$(call log-spinner,Проверка доступности репозитория,$(call check-remote-accessible,$$ORIGIN_URL)) || exit 0; \
 		$(call log-spinner,Клонирование репозитория,TEMP_DIR=$$($(call clone-to-temp,$$ORIGIN_URL))); \
-		if [ -z "$$TEMP_DIR" ]; then \
+		if [ -z "$$TEMP_DIR" ] || [ ! -d "$$TEMP_DIR" ]; then \
+			$(call log-error,Не удалось клонировать репозиторий); \
 			exit 0; \
 		fi; \
 		COMMIT_COUNT=$$($(call count-commits,$$TEMP_DIR)); \
@@ -85,9 +86,7 @@ devenv-init-internal:
 	fi
 
 	@# 1.6. Настройка template remote
-	@git remote add template "$$TEMPLATE_URL" 2>/dev/null || true
-	@git fetch template --tags --force >/dev/null 2>&1 || true
-	@$(call log-success,Установлен git remote 'template': $$TEMPLATE_URL)
+	@$(call log-spinner,Настройка git remote template,git remote add template "$$TEMPLATE_URL" 2>/dev/null || true; git fetch template --tags --force 2>&1)
 
 	@# 1.7. Обновление .gitignore
 	@if grep -q "^modules/\*/" .gitignore 2>/dev/null; then \
@@ -132,7 +131,7 @@ devenv-init-internal:
 
 	@# 3.1. git add -A
 	@git add -A 2>/dev/null || true
-	@$(call log-info,Файлы добавлены в git staging область)
+	@$(call log-success,Файлы добавлены в git staging область)
 
 	@# 3.2. git commit
 	@if [ "$$INIT_MODE" = "Новый репозиторий (локально)" ]; then \
@@ -141,7 +140,7 @@ devenv-init-internal:
 		COMMIT_MSG="chore: reinitialize project from devcontainer-workspace template"; \
 	fi
 	@git commit -q -m "$$COMMIT_MSG" 2>/dev/null || true
-	@$(call log-success,Создан коммит "$$COMMIT_MSG")
+	@printf "$(COLOR_SUCCESS)✓ %s$(COLOR_RESET)\n" "Создан коммит \"$$COMMIT_MSG\""
 
 	@# 3.3. git push (только если origin настроен)
 	@if [ "$$ORIGIN_CONFIGURED" = "true" ]; then \

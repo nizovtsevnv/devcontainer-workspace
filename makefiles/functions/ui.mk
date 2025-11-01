@@ -146,7 +146,7 @@ endef
 # Возвращает: введенный текст или default
 # Использование: URL=$$($(call ask-input-with-default,https://github.com/user/repo,Введите URL))
 define ask-input-with-default
-	printf "$(COLOR_INFO)➜ $(COLOR_RESET)%s $(COLOR_SUCCESS)[default: %s]$(COLOR_RESET): " "$(2)" "$(1)" >&2; \
+	printf "$(COLOR_INFO)➜ $(COLOR_RESET)%s $(COLOR_DIM)[%s]$(COLOR_RESET): " "$(2)" "$(1)" >&2; \
 	read -r input_value </dev/tty; \
 	if [ -z "$$input_value" ]; then \
 		echo "$(1)"; \
