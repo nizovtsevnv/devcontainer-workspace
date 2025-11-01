@@ -62,14 +62,16 @@ devenv-init-internal:
 		if [ -z "$$ORIGIN_URL" ]; then \
 			exit 0; \
 		fi; \
-		$(call check-remote-accessible,$$ORIGIN_URL) || exit 0; \
-		$(call log-success,Удалённый репозиторий доступен); \
-		TEMP_DIR=$$($(call clone-to-temp,$$ORIGIN_URL)) || exit 0; \
+		$(call log-spinner,Проверка доступности репозитория,$(call check-remote-accessible,$$ORIGIN_URL)) || exit 0; \
+		$(call log-spinner,Клонирование репозитория,TEMP_DIR=$$($(call clone-to-temp,$$ORIGIN_URL))); \
+		if [ -z "$$TEMP_DIR" ]; then \
+			exit 0; \
+		fi; \
 		COMMIT_COUNT=$$($(call count-commits,$$TEMP_DIR)); \
 		if [ "$$COMMIT_COUNT" -gt 0 ]; then \
-			$(call log-info,Обнаружено коммитов в удалённом репозитории: $$COMMIT_COUNT); \
+			$(call log-info,В удалённом репозитории найдено $$COMMIT_COUNT коммита); \
 			printf "\n"; \
-			if ! $(call ask-yes-no,Продолжить переинициализацию? (история будет сохранена)); then \
+			if ! $(call ask-yes-no,Продолжить инициализацию нового проекта? (история коммитов будет сохранена)); then \
 				rm -rf "$$TEMP_DIR"; \
 				exit 0; \
 			fi; \
@@ -130,7 +132,7 @@ devenv-init-internal:
 
 	@# 3.1. git add -A
 	@git add -A 2>/dev/null || true
-	@$(call log-info,Файлы добавлены в staging area)
+	@$(call log-success,Файлы добавлены в staging area)
 
 	@# 3.2. git commit
 	@if [ "$$INIT_MODE" = "Новый репозиторий (локально)" ]; then \
@@ -139,7 +141,7 @@ devenv-init-internal:
 		COMMIT_MSG="chore: reinitialize project from devcontainer-workspace template"; \
 	fi
 	@git commit -q -m "$$COMMIT_MSG" 2>/dev/null || true
-	@$(call log-success,Создан коммит: $$COMMIT_MSG)
+	@$(call log-success,Создан коммит "$$COMMIT_MSG")
 
 	@# 3.3. git push (только если origin настроен)
 	@if [ "$$ORIGIN_CONFIGURED" = "true" ]; then \

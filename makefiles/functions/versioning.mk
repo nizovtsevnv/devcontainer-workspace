@@ -77,6 +77,8 @@ define check-remote-accessible
 		$(call log-error,Удалённый репозиторий недоступен: $(1)); \
 		$(call log-info,Проверьте URL и доступ к репозиторию); \
 		false; \
+	else \
+		true; \
 	fi
 endef
 
@@ -94,12 +96,10 @@ endef
 # Использование: TEMP_DIR=$$($(call clone-to-temp,<url>))
 define clone-to-temp
 	TEMP_DIR=$$(mktemp -d /tmp/devenv-init.XXXXXX); \
-	printf "$(COLOR_INFO)ℹ Клонирование репозитория...$(COLOR_RESET)\n" >&2; \
 	if git clone -q "$(1)" "$$TEMP_DIR" 2>/dev/null; then \
 		echo "$$TEMP_DIR"; \
 	else \
 		rm -rf "$$TEMP_DIR"; \
-		printf "$(COLOR_ERROR)✗ Не удалось клонировать репозиторий$(COLOR_RESET)\n" >&2; \
 		false; \
 	fi
 endef
