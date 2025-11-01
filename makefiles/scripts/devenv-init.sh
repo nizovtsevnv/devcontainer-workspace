@@ -71,8 +71,8 @@ else
 	printf "\n"
 	origin_url=$(ask_input_with_default "" "URL удалённого репозитория") || exit 0
 	if [ -z "$origin_url" ]; then
-		log_info "Операция отменена"
-		exit 0
+		log_error "URL удалённого репозитория обязателен"
+		exit 1
 	fi
 
 	# Клонирование репозитория
