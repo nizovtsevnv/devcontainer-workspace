@@ -22,17 +22,16 @@ define check-project-init-status
 	fi
 endef
 
-# Удалить артефакты шаблона (README.project.md, .github/)
+# Удалить артефакты шаблона (.github/, README.project.md)
 # Использование: @$(call remove-template-artifacts)
 define remove-template-artifacts
-	if [ -f ".github/workflows/release.yml" ]; then \
-		rm -f .github/workflows/release.yml; \
-		if [ -z "$$(ls -A .github/workflows/ 2>/dev/null)" ]; then \
-			rm -rf .github; \
-		fi; \
+	if [ -d ".github" ]; then \
+		rm -rf .github; \
+		$(call log-success,Удалена директория .github/); \
 	fi; \
 	if [ -f "README.project.md" ]; then \
 		rm -f README.project.md; \
+		$(call log-success,Удалён файл README.project.md); \
 	fi
 endef
 

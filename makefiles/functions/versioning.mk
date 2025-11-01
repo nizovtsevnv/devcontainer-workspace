@@ -67,3 +67,38 @@ define require-clean-working-tree
 		exit 1; \
 	fi
 endef
+
+# Проверить доступность удалённого репозитория
+# Параметр: $(1) - URL репозитория
+# Использование: @$(call check-remote-accessible,git@github.com:user/repo.git)
+define check-remote-accessible
+	if ! git ls-remote "$(1)" >/dev/null 2>&1; then \
+		$(call log-error,Удалённый репозиторий недоступен: $(1)); \
+		$(call log-info,Проверьте URL и доступ к репозиторию); \
+		exit 1; \
+	fi
+endef
+
+# Подсчитать количество коммитов в репозитории
+# Параметр: $(1) - путь к git репозиторию (опционально, по умолчанию текущий)
+# Возвращает: число коммитов
+# Использование: COUNT=$$($(call count-commits,/path/to/repo))
+define count-commits
+	git $(if $(1),-C $(1),) rev-list --count HEAD 2>/dev/null || echo "0"
+endef
+
+# Клонировать репозиторий во временную папку
+# Параметр: $(1) - URL репозитория
+# Возвращает: путь к временной папке
+# Использование: TEMP_DIR=$$($(call clone-to-temp,<url>))
+define clone-to-temp
+	TEMP_DIR=$$(mktemp -d /tmp/devenv-init.XXXXXX); \
+	$(call log-info,Клонирование репозитория...); \
+	if git clone -q "$(1)" "$$TEMP_DIR" 2>/dev/null; then \
+		echo "$$TEMP_DIR"; \
+	else \
+		rm -rf "$$TEMP_DIR"; \
+		$(call log-error,Не удалось клонировать репозиторий); \
+		exit 1; \
+	fi
+endef

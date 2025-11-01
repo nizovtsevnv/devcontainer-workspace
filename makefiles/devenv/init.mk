@@ -8,95 +8,171 @@
 devenv-init-internal:
 	@set -e
 	@$(call log-section,Инициализация проекта)
+
+	@# Проверка что проект ещё не инициализирован
 	@$(call check-project-init-status)
 	@if [ "$$STATUS" = "инициализирован" ]; then \
 		$(call log-error,Проект уже инициализирован); \
 		$(call log-info,Remote 'template' уже существует); \
 		exit 1; \
 	fi
+
+	@# Подтверждение необратимого действия
 	@$(call ask-yes-no,Шаблон будет переведён в режим проекта - это действие необратимо - продолжить?) || { \
 		$(call log-info,Инициализация отменена); \
 		exit 0; \
 	}
 
-	@# Определение версии шаблона
-	@CURRENT_VERSION=$$(git describe --tags 2>/dev/null || echo "unknown"); \
-	if [ "$$CURRENT_VERSION" = "unknown" ]; then \
+	@# ===========================================
+	@# СЕКЦИЯ 1: Подготовка Git репозитория
+	@# ===========================================
+	@printf "\n"
+	@$(call log-section,Подготовка Git репозитория)
+
+	@# 1.1. Определение версии шаблона
+	@CURRENT_VERSION=$$(git describe --tags 2>/dev/null || echo "unknown")
+	@if [ "$$CURRENT_VERSION" = "unknown" ]; then \
 		$(call log-error,Не удалось определить версию шаблона); \
 		$(call log-info,Убедитесь что вы клонировали репозиторий с тегами: git clone --tags); \
 		exit 1; \
-	fi; \
-	$(call log-info,Версия шаблона: $$CURRENT_VERSION); \
-	CURRENT_VERSION_CLEAN=$$(echo "$$CURRENT_VERSION" | sed 's/^v//' | cut -d'-' -f1); \
-	$(call save-template-version,$$CURRENT_VERSION_CLEAN); \
-	$(call log-success,Сохранена версия: $$CURRENT_VERSION_CLEAN)
+	fi
+	@$(call log-info,Версия шаблона: $$CURRENT_VERSION)
+	@CURRENT_VERSION_CLEAN=$$(echo "$$CURRENT_VERSION" | sed 's/^v//' | cut -d'-' -f1)
 
-	@# Удаление файлов шаблона
-	@$(call log-info,Удаление файлов шаблона...)
-	@$(call remove-template-artifacts)
-
-	@# Пересоздание Git репозитория
-	@$(call log-info,Инициализация Git репозитория...)
-	@TEMPLATE_URL=$$(git remote get-url origin 2>/dev/null); \
-	if [ -z "$$TEMPLATE_URL" ]; then \
+	@# 1.2. Сохранение TEMPLATE_URL
+	@TEMPLATE_URL=$$(git remote get-url origin 2>/dev/null)
+	@if [ -z "$$TEMPLATE_URL" ]; then \
 		$(call log-error,Не удалось определить URL шаблона из origin); \
 		$(call log-info,Убедитесь что вы клонировали шаблон через git clone); \
 		exit 1; \
-	fi; \
-	rm -rf .git; \
-	$(call log-warning,Удалена история шаблона (.git/)); \
-	\
-	git init -q; \
-	$(call log-success,Создан новый репозиторий); \
-	\
-	git remote add template "$$TEMPLATE_URL"; \
-	$(call log-success,Установлен git remote 'template'\: $$TEMPLATE_URL); \
-	\
-	git fetch template --tags --force >/dev/null 2>&1 || true; \
-	$(call log-success,Получены теги из template)
+	fi
+	@$(call log-info,URL шаблона: $$TEMPLATE_URL)
 
-	@# Интерактивный выбор нового origin
+	@# 1.3. Выбор режима инициализации
 	@printf "\n"
-	@if $(call ask-yes-no,Указать удалённый Git URL?); then \
-		NEW_ORIGIN=$$($(call ask-input-with-default,,URL удалённого репозитория)); \
-		if [ -n "$$NEW_ORIGIN" ]; then \
-			git remote add origin "$$NEW_ORIGIN"; \
-			$(call log-success,Установлен git remote 'origin'\: $$NEW_ORIGIN); \
-		else \
-			$(call log-info,Remote 'origin' не настроен \(можно добавить позже\)); \
-		fi; \
+	@INIT_MODE=$$(sh makefiles/scripts/select-menu.sh "Новый репозиторий (создать с нуля)" "Сохранить историю из удалённого репозитория" "Отменить инициализацию") || { \
+		$(call log-info,Инициализация отменена); \
+		exit 0; \
+	}
+	@if [ "$$INIT_MODE" = "Отменить инициализацию" ]; then \
+		$(call log-info,Инициализация отменена); \
+		exit 0; \
+	fi
+	@printf "\n"
+
+	@# 1.4 или 1.5 в зависимости от режима
+	@if [ "$$INIT_MODE" = "Новый репозиторий (создать с нуля)" ]; then \
+		$(call log-info,Режим: Новый репозиторий); \
+		rm -rf .git; \
+		git init -q; \
+		$(call log-success,Создан новый Git репозиторий); \
+		ORIGIN_CONFIGURED=false; \
 	else \
-		$(call log-info,Remote 'origin' не настроен \(можно добавить позже\)); \
+		$(call log-info,Режим: Сохранение истории из удалённого репозитория); \
+		printf "\n"; \
+		ORIGIN_URL=$$($(call ask-input-with-default,,URL удалённого репозитория)); \
+		if [ -z "$$ORIGIN_URL" ]; then \
+			$(call log-error,URL не может быть пустым); \
+			exit 1; \
+		fi; \
+		$(call check-remote-accessible,$$ORIGIN_URL); \
+		$(call log-success,Удалённый репозиторий доступен); \
+		TEMP_DIR=$$($(call clone-to-temp,$$ORIGIN_URL)); \
+		COMMIT_COUNT=$$($(call count-commits,$$TEMP_DIR)); \
+		if [ "$$COMMIT_COUNT" -gt 0 ]; then \
+			$(call log-info,Обнаружено коммитов в удалённом репозитории: $$COMMIT_COUNT); \
+			printf "\n"; \
+			if ! $(call ask-yes-no,Продолжить переинициализацию? (история будет сохранена)); then \
+				rm -rf "$$TEMP_DIR"; \
+				$(call log-info,Инициализация отменена); \
+				exit 0; \
+			fi; \
+			printf "\n"; \
+		fi; \
+		rm -rf .git; \
+		mv "$$TEMP_DIR/.git" ./; \
+		rm -rf "$$TEMP_DIR"; \
+		$(call log-success,История Git перенесена из удалённого репозитория); \
+		ORIGIN_CONFIGURED=true; \
 	fi
 
-	@# Создание README проекта
-	@$(call create-project-readme)
+	@# 1.6. Настройка template remote
+	@git remote add template "$$TEMPLATE_URL" 2>/dev/null || true
+	@git fetch template --tags --force >/dev/null 2>&1 || true
+	@$(call log-success,Установлен git remote 'template': $$TEMPLATE_URL)
 
-	@# Обновление .gitignore для проекта
+	@# 1.7. Обновление .gitignore
 	@$(call log-info,Обновление .gitignore...)
 	@if grep -q "^modules/\*/" .gitignore 2>/dev/null; then \
 		sed -i '/^# Modules (template development)/,/^modules\/\*\//d' .gitignore; \
 		$(call log-success,Правило modules/*/ удалено из .gitignore); \
-	else \
-		$(call log-warning,Правило modules/*/ не найдено в .gitignore); \
 	fi
 	@if grep -q "^\.template-version$$" .gitignore 2>/dev/null; then \
 		sed -i '/^\.template-version$$/d' .gitignore; \
-		$(call log-success,.template-version удалён из .gitignore \(будет отслеживаться в проекте\)); \
-	else \
-		$(call log-warning,.template-version не найден в .gitignore); \
+		$(call log-success,.template-version удалён из .gitignore); \
 	fi
 
-	@# Initial commit
+	@# ===========================================
+	@# СЕКЦИЯ 2: Подготовка файлов проекта
+	@# ===========================================
 	@printf "\n"
-	@if $(call ask-yes-no,Создать initial commit?); then \
-		git add . 2>/dev/null || true; \
-		git commit -m "chore: initialize project from devcontainer-workspace template" 2>/dev/null || true; \
-		$(call log-success,Initial commit создан); \
+	@$(call log-section,Подготовка файлов проекта)
+
+	@# 2.1. Создание README.md
+	@if [ -f "README.project.md" ]; then \
+		cp README.project.md README.md; \
+		$(call log-success,README.md создан из шаблона); \
 	else \
-		$(call log-info,Initial commit пропущен - можно создать вручную); \
+		echo "# My Project" > README.md; \
+		echo "" >> README.md; \
+		echo "Проект создан из [DevContainer Workspace](https://github.com/nizovtsevnv/devcontainer-workspace)" >> README.md; \
+		$(call log-success,README.md создан); \
 	fi
 
+	@# 2.2. Сохранение .template-version
+	@echo "$$CURRENT_VERSION_CLEAN" > .template-version
+	@git add -f .template-version 2>/dev/null || true
+	@$(call log-success,Сохранена версия шаблона: $$CURRENT_VERSION_CLEAN)
+
+	@# 2.3. Удаление артефактов
+	@$(call log-info,Удаление артефактов шаблона...)
+	@$(call remove-template-artifacts)
+
+	@# ===========================================
+	@# СЕКЦИЯ 3: Завершение инициализации
+	@# ===========================================
+	@printf "\n"
+	@$(call log-section,Завершение инициализации)
+
+	@# 3.1. git add -A
+	@git add -A 2>/dev/null || true
+	@$(call log-info,Файлы добавлены в staging area)
+
+	@# 3.2. git commit
+	@if [ "$$INIT_MODE" = "Новый репозиторий (создать с нуля)" ]; then \
+		COMMIT_MSG="chore: initialize project from devcontainer-workspace template"; \
+	else \
+		COMMIT_MSG="chore: reinitialize project from devcontainer-workspace template"; \
+	fi
+	@git commit -m "$$COMMIT_MSG" 2>/dev/null || true
+	@$(call log-success,Создан коммит: $$COMMIT_MSG)
+
+	@# 3.3. git push (только если origin настроен)
+	@if [ "$$ORIGIN_CONFIGURED" = "true" ]; then \
+		printf "\n"; \
+		if $(call ask-yes-no,Отправить изменения в удалённый репозиторий?); then \
+			CURRENT_BRANCH=$$(git branch --show-current); \
+			git push -u origin "$$CURRENT_BRANCH" 2>&1 || { \
+				$(call log-warning,Не удалось отправить изменения); \
+				$(call log-info,Используйте: git push -u origin $$CURRENT_BRANCH); \
+			}; \
+			$(call log-success,Изменения отправлены в удалённый репозиторий); \
+		else \
+			$(call log-info,Push пропущен - можно выполнить позже вручную); \
+		fi; \
+	fi
+
+	@# Финальное сообщение
 	@printf "\n"
 	@$(call log-success,Проект успешно инициализирован!)
 	@printf "\n"
