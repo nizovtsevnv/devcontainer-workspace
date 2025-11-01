@@ -79,9 +79,11 @@ else
 	sp='◐◓◑◒'
 	i=0
 	temp_dir=$(mktemp -d /tmp/devenv-init.XXXXXX)
+	tmpfile=$(mktemp)
+	trap "rm -f $tmpfile" EXIT INT TERM
 
 	printf "$sp Клонирование репозитория..." >&2
-	git clone -q "$origin_url" "$temp_dir" >/dev/null 2>&1 &
+	git clone -q "$origin_url" "$temp_dir" > "$tmpfile" 2>&1 &
 	clone_pid=$!
 
 	while ps -p $clone_pid >/dev/null 2>&1; do
@@ -99,11 +101,22 @@ else
 		printf "\r${COLOR_SUCCESS}✓${COLOR_RESET} Клонирование репозитория   \n" >&2
 	else
 		printf "\r${COLOR_ERROR}✗${COLOR_RESET} Клонирование репозитория   \n" >&2
+
+		# Показываем вывод ошибки
+		if [ -s "$tmpfile" ]; then
+			printf "\n" >&2
+			cat "$tmpfile" >&2
+			printf "\n" >&2
+		fi
+
 		rm -rf "$temp_dir"
+		rm -f "$tmpfile"
 		log_error "Не удалось клонировать репозиторий"
 		log_info "Проверьте URL и доступ к репозиторию"
 		exit 0
 	fi
+
+	rm -f "$tmpfile"
 
 	commit_count=$(count_commits "$temp_dir")
 	if [ "$commit_count" -gt 0 ]; then

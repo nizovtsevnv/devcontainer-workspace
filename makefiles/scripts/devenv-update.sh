@@ -105,7 +105,15 @@ if [ "$STATUS" = "инициализирован" ]; then
 	fi
 
 	# Выполняем merge
-	git merge --allow-unrelated-histories --no-commit --no-ff "$merge_ref" >/dev/null 2>&1 || true
+	tmpfile=$(mktemp)
+	if ! git merge --allow-unrelated-histories --no-commit --no-ff "$merge_ref" > "$tmpfile" 2>&1; then
+		# Merge с конфликтами - это нормально, продолжаем
+		# Но показываем вывод если это не конфликт, а другая ошибка
+		if ! grep -q "Automatic merge failed" "$tmpfile"; then
+			cat "$tmpfile" >&2
+		fi
+	fi
+	rm -f "$tmpfile"
 
 	# Автоматически разрешаем конфликты
 	auto_resolve_template_conflicts
@@ -158,11 +166,20 @@ if [ "$STATUS" = "инициализирован" ]; then
 	commit_msg=$(ask_input_with_default "$default_msg" "Сообщение коммита:")
 
 	if [ -n "$commit_msg" ]; then
-		git commit -m "$commit_msg" >/dev/null 2>&1
-		printf "\n"
-		log_success "Обновление завершено!"
-		printf "  Новая версия: %s\n" "$new_version"
-		printf "  Коммит создан\n"
+		tmpfile=$(mktemp)
+		if git commit -m "$commit_msg" > "$tmpfile" 2>&1; then
+			printf "\n"
+			log_success "Обновление завершено!"
+			printf "  Новая версия: %s\n" "$new_version"
+			printf "  Коммит создан\n"
+		else
+			printf "\n"
+			log_error "Ошибка при создании коммита:"
+			cat "$tmpfile" >&2
+			printf "\n"
+			log_info "Изменения staged - выполните 'git commit' вручную"
+		fi
+		rm -f "$tmpfile"
 	else
 		log_warning "Пустое сообщение - коммит пропущен"
 		printf "  Изменения staged - выполните 'git commit' вручную\n"
