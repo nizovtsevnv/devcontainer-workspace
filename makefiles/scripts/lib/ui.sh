@@ -180,6 +180,7 @@ select_menu() {
 				printf "\r\033[K" >/dev/tty
 				stty "$old_stty" </dev/tty
 				_cursor_blink_on
+				trap - INT TERM EXIT
 				exec 0<&3 2>&4
 				exec 3<&- 4>&-
 				return 1
@@ -234,6 +235,7 @@ select_menu() {
 			printf "\r\033[K" >/dev/tty
 			stty "$old_stty" </dev/tty
 			_cursor_blink_on
+			trap - INT TERM EXIT
 			exec 0<&3 2>&4
 			exec 3<&- 4>&-
 			exit 130
@@ -243,6 +245,9 @@ select_menu() {
 	# Восстанавливаем терминал
 	stty "$old_stty" </dev/tty
 	_cursor_blink_on
+
+	# Отключаем trap перед ручным восстановлением
+	trap - INT TERM EXIT
 
 	# Восстанавливаем stdin/stderr
 	exec 0<&3 2>&4
