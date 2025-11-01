@@ -61,8 +61,11 @@ devenv-init-internal:
 			$(call log-error,URL репозитория не может быть пустым); \
 			exit 0; \
 		fi; \
-		TEMP_DIR=$$($(call log-spinner,Клонирование репозитория,$(call clone-to-temp,$$ORIGIN_URL)) || true); \
-		if [ -z "$$TEMP_DIR" ] || [ ! -d "$$TEMP_DIR" ]; then \
+		set +e; \
+		TEMP_DIR=$$($(call log-spinner,Клонирование репозитория,$(call clone-to-temp,$$ORIGIN_URL))); \
+		CLONE_STATUS=$$?; \
+		set -e; \
+		if [ $$CLONE_STATUS -ne 0 ] || [ -z "$$TEMP_DIR" ] || [ ! -d "$$TEMP_DIR" ]; then \
 			printf "\n"; \
 			$(call log-error,Не удалось клонировать репозиторий); \
 			$(call log-info,Проверьте URL и доступ к репозиторию); \
@@ -158,7 +161,6 @@ devenv-init-internal:
 	fi
 
 	@# Финальное сообщение
-	@printf "\n"
 	@$(call log-success,Проект успешно инициализирован!)
 	@printf "\n"
 	@$(call log-info,Следующие шаги:)
