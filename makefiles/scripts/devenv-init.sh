@@ -71,52 +71,20 @@ else
 	printf "\n"
 	origin_url=$(ask_input_with_default "" "URL удалённого репозитория") || exit 0
 	if [ -z "$origin_url" ]; then
-		log_error "URL репозитория не может быть пустым"
+		log_info "Операция отменена"
 		exit 0
 	fi
 
-	# Клонирование с UI спиннером
-	sp='◐◓◑◒'
-	i=0
+	# Клонирование репозитория
 	temp_dir=$(mktemp -d /tmp/devenv-init.XXXXXX)
-	tmpfile=$(mktemp)
-	trap "rm -f $tmpfile" EXIT INT TERM
 
-	printf "$sp Клонирование репозитория..." >&2
-	git clone -q "$origin_url" "$temp_dir" > "$tmpfile" 2>&1 &
-	clone_pid=$!
-
-	while ps -p $clone_pid >/dev/null 2>&1; do
-		idx=$((i % 4))
-		char=$(printf '%s' "$sp" | awk -v i=$((idx+1)) '{print substr($0,i,1)}')
-		printf "\r$char Клонирование репозитория..." >&2
-		i=$((i + 1))
-		sleep 0.15
-	done
-
-	wait $clone_pid
-	clone_exit=$?
-
-	if [ $clone_exit -eq 0 ]; then
-		printf "\r${COLOR_SUCCESS}✓${COLOR_RESET} Клонирование репозитория   \n" >&2
-	else
-		printf "\r${COLOR_ERROR}✗${COLOR_RESET} Клонирование репозитория   \n" >&2
-
-		# Показываем вывод ошибки
-		if [ -s "$tmpfile" ]; then
-			printf "\n" >&2
-			cat "$tmpfile" >&2
-			printf "\n" >&2
-		fi
-
+	if ! show_spinner "Клонирование репозитория" git clone -q "$origin_url" "$temp_dir" 2>&1; then
+		printf "\n"
 		rm -rf "$temp_dir"
-		rm -f "$tmpfile"
 		log_error "Не удалось клонировать репозиторий"
 		log_info "Проверьте URL и доступ к репозиторию"
-		exit 0
+		exit 1
 	fi
-
-	rm -f "$tmpfile"
 
 	commit_count=$(count_commits "$temp_dir")
 	if [ "$commit_count" -gt 0 ]; then
