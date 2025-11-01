@@ -117,22 +117,22 @@ endef
 # Запрос подтверждения (дефолт: NO)
 # Использование: $(call ask-confirm,message)
 define ask-confirm
-	printf "$(COLOR_WARNING)? $(COLOR_RESET)%s $(COLOR_INFO)[y/N]$(COLOR_RESET): " "$(1)"; \
-	read -r answer; \
+	printf "$(COLOR_WARNING)? $(COLOR_RESET)%s $(COLOR_INFO)[y/N]$(COLOR_RESET): " "$(1)" >&2; \
+	read -r answer </dev/tty; \
 	case "$$answer" in \
-		[Yy]|[Yy][Ee][Ss]) printf "$(COLOR_SUCCESS)✓ Продолжаем$(COLOR_RESET)\n" ;; \
-		*) printf "$(COLOR_INFO)ℹ Отменено$(COLOR_RESET)\n"; exit 1 ;; \
+		[Yy]|[Yy][Ee][Ss]) printf "$(COLOR_SUCCESS)✓ Продолжаем$(COLOR_RESET)\n" >&2 ;; \
+		*) printf "$(COLOR_INFO)ℹ Отменено$(COLOR_RESET)\n" >&2; exit 1 ;; \
 	esac
 endef
 
 # Запрос подтверждения (дефолт: YES)
 # Использование: $(call ask-confirm-default-yes,message)
 define ask-confirm-default-yes
-	printf "$(COLOR_WARNING)? $(COLOR_RESET)%s $(COLOR_SUCCESS)[Y/n]$(COLOR_RESET): " "$(1)"; \
-	read -r answer; \
+	printf "$(COLOR_WARNING)? $(COLOR_RESET)%s $(COLOR_SUCCESS)[Y/n]$(COLOR_RESET): " "$(1)" >&2; \
+	read -r answer </dev/tty; \
 	case "$$answer" in \
-		[Nn]|[Nn][Oo]) printf "$(COLOR_INFO)ℹ Отменено$(COLOR_RESET)\n"; exit 1 ;; \
-		*) printf "$(COLOR_SUCCESS)✓ Продолжаем$(COLOR_RESET)\n" ;; \
+		[Nn]|[Nn][Oo]) printf "$(COLOR_INFO)ℹ Отменено$(COLOR_RESET)\n" >&2; exit 1 ;; \
+		*) printf "$(COLOR_SUCCESS)✓ Продолжаем$(COLOR_RESET)\n" >&2 ;; \
 	esac
 endef
 

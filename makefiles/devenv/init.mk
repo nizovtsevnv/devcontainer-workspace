@@ -12,7 +12,7 @@ devenv-init-internal:
 		$(call log-info,Remote 'template' уже существует); \
 		exit 1; \
 	fi
-	@$(call ask-confirm,Шаблон будет переведён в режим проекта\, это действие необратимо\, продолжить)
+	@$(call ask-confirm,Шаблон будет переведён в режим проекта - это действие необратимо - продолжить?)
 
 	@# Проверка версии и автоматический checkout на последний тег
 	@CURRENT_VERSION=$$(git describe --tags --exact-match HEAD 2>/dev/null); \

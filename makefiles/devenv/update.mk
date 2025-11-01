@@ -91,24 +91,24 @@ devenv-update-project:
 	git diff --cached --stat --color=always; \
 	printf "\n"; \
 	\
-	if $(call ask-confirm,Создать коммит обновления шаблона); then \
-		DEFAULT_MSG="chore: update devenv template to $$NEW_VERSION"; \
-		COMMIT_MSG=$$($(call ask-input-with-default,$$DEFAULT_MSG,Сообщение коммита:)); \
-		if [ -n "$$COMMIT_MSG" ]; then \
-			git commit -m "$$COMMIT_MSG" >/dev/null 2>&1; \
-			printf "\n"; \
-			$(call log-success,Обновление завершено!); \
-			printf "  Новая версия: $$NEW_VERSION\n"; \
-			printf "  Коммит создан\n"; \
-		else \
-			$(call log-warning,Пустое сообщение\, коммит пропущен); \
-			printf "  Изменения staged\, выполните 'git commit' вручную\n"; \
-		fi; \
-	else \
+	$(call ask-confirm,Создать коммит обновления шаблона?) || { \
 		printf "\n"; \
 		$(call log-info,Обновление завершено без коммита); \
 		printf "  Новая версия: $$NEW_VERSION\n"; \
-		printf "  Изменения staged\, выполните 'git commit' когда будете готовы\n"; \
+		printf "  Изменения staged - выполните 'git commit' когда будете готовы\n"; \
+		exit 0; \
+	}; \
+	DEFAULT_MSG="chore: update devenv template to $$NEW_VERSION"; \
+	COMMIT_MSG=$$($(call ask-input-with-default,$$DEFAULT_MSG,Сообщение коммита:)); \
+	if [ -n "$$COMMIT_MSG" ]; then \
+		git commit -m "$$COMMIT_MSG" >/dev/null 2>&1; \
+		printf "\n"; \
+		$(call log-success,Обновление завершено!); \
+		printf "  Новая версия: $$NEW_VERSION\n"; \
+		printf "  Коммит создан\n"; \
+	else \
+		$(call log-warning,Пустое сообщение - коммит пропущен); \
+		printf "  Изменения staged - выполните 'git commit' вручную\n"; \
 	fi
 
 	@# Обновить Docker образ и пересоздать контейнер
