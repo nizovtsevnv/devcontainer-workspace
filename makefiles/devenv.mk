@@ -16,13 +16,13 @@ devenv:
 		printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv status" "Текущий статус и версия шаблона"; \
 		printf "  $(COLOR_SUCCESS)%-24s$(COLOR_RESET) %s\n" "make devenv update" "Обновить версию шаблона"; \
 	elif [ "$(DEVENV_CMD)" = "init" ]; then \
-		$(MAKE) devenv-init-internal; \
+		$(MAKE) -s --no-print-directory devenv-init-internal || exit $$?; \
 	elif [ "$(DEVENV_CMD)" = "test" ]; then \
-		$(MAKE) devenv-test-internal; \
+		$(MAKE) -s --no-print-directory devenv-test-internal || exit $$?; \
 	elif [ "$(DEVENV_CMD)" = "status" ]; then \
-		$(MAKE) devenv-status-internal; \
+		$(MAKE) -s --no-print-directory devenv-status-internal || exit $$?; \
 	elif [ "$(DEVENV_CMD)" = "update" ]; then \
-		$(MAKE) devenv-update-internal; \
+		$(MAKE) -s --no-print-directory devenv-update-internal || exit $$?; \
 	else \
 		printf "$(COLOR_ERROR)✗$(COLOR_RESET) Неизвестная подкоманда: $(DEVENV_CMD)\n" >&2; \
 		printf "$(COLOR_INFO)ℹ$(COLOR_RESET) Доступны: init, test, status, update\n"; \
