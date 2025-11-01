@@ -72,11 +72,17 @@ if [ "$STATUS" = "инициализирован" ]; then
 
 	printf "Текущая версия шаблона:    %s\n" "$current_version"
 	printf "Последняя версия шаблона:  %s\n" "$display_version"
-
-	# Показать изменения
 	printf "\n"
-	log_info "Изменения ($current_version..$display_version):"
-	show_changelog "$current_version" "template/main"
+
+	# Проверка: если уже на последней версии
+	if [ "$current_version" = "$display_version" ]; then
+		log_success "У вас самая свежая версия"
+	else
+		# Показать изменения
+		log_info "Изменения ($current_version..$display_version):"
+		show_changelog "$current_version" "template/main"
+	fi
+
 	printf "\n"
 
 	# Интерактивный выбор версии (умная фильтрация)
@@ -86,13 +92,20 @@ if [ "$STATUS" = "инициализирован" ]; then
 	log_section "Выберите версию для обновления:"
 	target_version=$(select_menu $version_options) || exit 0
 
-	# Проверка: не пытаемся ли обновиться на ту же версию
+	# Проверка 1: точное совпадение версий
+	if [ "$current_version" = "$target_version" ]; then
+		printf "\n"
+		log_success "У вас уже установлена эта версия"
+		exit 0
+	fi
+
+	# Проверка 2: близкие версии (одна базовая, разные патчи)
 	current_version_base=$(echo "$current_version" | sed 's/-.*$//')
 	target_version_base=$(echo "$target_version" | sed 's/-.*$//')
 
 	if [ "$target_version_base" = "$current_version_base" ]; then
 		printf "\n"
-		log_warning "Выбрана текущая или близкая версия ($target_version)"
+		log_warning "Выбрана близкая версия ($target_version)"
 		if ! ask_yes_no "Продолжить? (может привести к конфликтам)"; then
 			log_info "Обновление отменено"
 			exit 0
@@ -164,7 +177,7 @@ if [ "$STATUS" = "инициализирован" ]; then
 		printf "\n"
 		log_info "Обновление завершено без коммита"
 		printf "  Новая версия: %s\n" "$new_version"
-		printf "  Изменения staged - выполните 'git commit' когда будете готовы\n"
+		printf "  Выполните 'git commit' когда будете готовы\n"
 		exit 0
 	fi
 
@@ -184,12 +197,12 @@ if [ "$STATUS" = "инициализирован" ]; then
 			log_error "Ошибка при создании коммита:"
 			cat "$tmpfile" >&2
 			printf "\n"
-			log_info "Изменения staged - выполните 'git commit' вручную"
+			log_info "Выполните 'git commit' вручную"
 		fi
 		rm -f "$tmpfile"
 	else
 		log_warning "Пустое сообщение - коммит пропущен"
-		printf "  Изменения staged - выполните 'git commit' вручную\n"
+		printf "  Выполните 'git commit' вручную\n"
 	fi
 
 	# Обновить Docker образ и пересоздать контейнер

@@ -42,7 +42,6 @@ if [ -z "$template_url" ]; then
 fi
 
 log_info "Версия шаблона: $current_version"
-log_info "URL шаблона: $template_url"
 
 # Сохраняем полную версию (с -N-gXXX если есть), а не только базовую
 current_version_clean=$(echo "$current_version" | sed 's/^v//')
