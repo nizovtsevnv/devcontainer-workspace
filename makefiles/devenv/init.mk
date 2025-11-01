@@ -17,12 +17,6 @@ devenv-init-internal:
 		exit 1; \
 	fi
 
-	@# Подтверждение необратимого действия
-	@$(call ask-yes-no,Шаблон будет переведён в режим проекта - это действие необратимо - продолжить?) || { \
-		$(call log-info,Инициализация отменена); \
-		exit 0; \
-	}
-
 	@# ===========================================
 	@# СЕКЦИЯ 1: Подготовка Git репозитория
 	@# ===========================================
@@ -50,41 +44,33 @@ devenv-init-internal:
 
 	@# 1.3. Выбор режима инициализации
 	@printf "\n"
-	@INIT_MODE=$$(sh makefiles/scripts/select-menu.sh "Новый репозиторий (создать с нуля)" "Сохранить историю из удалённого репозитория" "Отменить инициализацию") || { \
-		$(call log-info,Инициализация отменена); \
-		exit 0; \
-	}
-	@if [ "$$INIT_MODE" = "Отменить инициализацию" ]; then \
-		$(call log-info,Инициализация отменена); \
+	@INIT_MODE=$$(sh makefiles/scripts/select-menu.sh "Новый репозиторий (локально)" "Удалённый репозиторий" "Отмена") || exit 0
+	@if [ "$$INIT_MODE" = "Отмена" ]; then \
 		exit 0; \
 	fi
 	@printf "\n"
 
 	@# 1.4 или 1.5 в зависимости от режима
-	@if [ "$$INIT_MODE" = "Новый репозиторий (создать с нуля)" ]; then \
-		$(call log-info,Режим: Новый репозиторий); \
+	@if [ "$$INIT_MODE" = "Новый репозиторий (локально)" ]; then \
 		rm -rf .git; \
 		git init -q; \
 		$(call log-success,Создан новый Git репозиторий); \
 		ORIGIN_CONFIGURED=false; \
 	else \
-		$(call log-info,Режим: Сохранение истории из удалённого репозитория); \
 		printf "\n"; \
-		ORIGIN_URL=$$($(call ask-input-with-default,,URL удалённого репозитория)); \
+		ORIGIN_URL=$$($(call ask-input-with-default,,URL удалённого репозитория)) || exit 0; \
 		if [ -z "$$ORIGIN_URL" ]; then \
-			$(call log-error,URL не может быть пустым); \
-			exit 1; \
+			exit 0; \
 		fi; \
-		$(call check-remote-accessible,$$ORIGIN_URL); \
+		$(call check-remote-accessible,$$ORIGIN_URL) || exit 0; \
 		$(call log-success,Удалённый репозиторий доступен); \
-		TEMP_DIR=$$($(call clone-to-temp,$$ORIGIN_URL)); \
+		TEMP_DIR=$$($(call clone-to-temp,$$ORIGIN_URL)) || exit 0; \
 		COMMIT_COUNT=$$($(call count-commits,$$TEMP_DIR)); \
 		if [ "$$COMMIT_COUNT" -gt 0 ]; then \
 			$(call log-info,Обнаружено коммитов в удалённом репозитории: $$COMMIT_COUNT); \
 			printf "\n"; \
 			if ! $(call ask-yes-no,Продолжить переинициализацию? (история будет сохранена)); then \
 				rm -rf "$$TEMP_DIR"; \
-				$(call log-info,Инициализация отменена); \
 				exit 0; \
 			fi; \
 			printf "\n"; \
@@ -102,7 +88,6 @@ devenv-init-internal:
 	@$(call log-success,Установлен git remote 'template': $$TEMPLATE_URL)
 
 	@# 1.7. Обновление .gitignore
-	@$(call log-info,Обновление .gitignore...)
 	@if grep -q "^modules/\*/" .gitignore 2>/dev/null; then \
 		sed -i '/^# Modules (template development)/,/^modules\/\*\//d' .gitignore; \
 		$(call log-success,Правило modules/*/ удалено из .gitignore); \
@@ -135,7 +120,6 @@ devenv-init-internal:
 	@$(call log-success,Сохранена версия шаблона: $$CURRENT_VERSION_CLEAN)
 
 	@# 2.3. Удаление артефактов
-	@$(call log-info,Удаление артефактов шаблона...)
 	@$(call remove-template-artifacts)
 
 	@# ===========================================
@@ -149,12 +133,12 @@ devenv-init-internal:
 	@$(call log-info,Файлы добавлены в staging area)
 
 	@# 3.2. git commit
-	@if [ "$$INIT_MODE" = "Новый репозиторий (создать с нуля)" ]; then \
+	@if [ "$$INIT_MODE" = "Новый репозиторий (локально)" ]; then \
 		COMMIT_MSG="chore: initialize project from devcontainer-workspace template"; \
 	else \
 		COMMIT_MSG="chore: reinitialize project from devcontainer-workspace template"; \
 	fi
-	@git commit -m "$$COMMIT_MSG" 2>/dev/null || true
+	@git commit -q -m "$$COMMIT_MSG" 2>/dev/null || true
 	@$(call log-success,Создан коммит: $$COMMIT_MSG)
 
 	@# 3.3. git push (только если origin настроен)

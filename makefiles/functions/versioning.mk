@@ -70,12 +70,13 @@ endef
 
 # Проверить доступность удалённого репозитория
 # Параметр: $(1) - URL репозитория
-# Использование: @$(call check-remote-accessible,git@github.com:user/repo.git)
+# Возвращает: true если доступен, false если нет
+# Использование: @$(call check-remote-accessible,git@github.com:user/repo.git) || exit 0
 define check-remote-accessible
 	if ! git ls-remote "$(1)" >/dev/null 2>&1; then \
 		$(call log-error,Удалённый репозиторий недоступен: $(1)); \
 		$(call log-info,Проверьте URL и доступ к репозиторию); \
-		exit 1; \
+		false; \
 	fi
 endef
 
@@ -93,12 +94,12 @@ endef
 # Использование: TEMP_DIR=$$($(call clone-to-temp,<url>))
 define clone-to-temp
 	TEMP_DIR=$$(mktemp -d /tmp/devenv-init.XXXXXX); \
-	$(call log-info,Клонирование репозитория...); \
+	printf "$(COLOR_INFO)ℹ Клонирование репозитория...$(COLOR_RESET)\n" >&2; \
 	if git clone -q "$(1)" "$$TEMP_DIR" 2>/dev/null; then \
 		echo "$$TEMP_DIR"; \
 	else \
 		rm -rf "$$TEMP_DIR"; \
-		$(call log-error,Не удалось клонировать репозиторий); \
-		exit 1; \
+		printf "$(COLOR_ERROR)✗ Не удалось клонировать репозиторий$(COLOR_RESET)\n" >&2; \
+		false; \
 	fi
 endef
